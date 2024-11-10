@@ -11,3 +11,13 @@ patches {
         license = "GNU General Public License v3.0"
     }
 }
+
+dependencies {
+    compileOnly(project(":patches:stub"))
+}
+
+kotlin {
+    compilerOptions {
+        freeCompilerArgs = listOf("-Xcontext-receivers")
+    }
+}
