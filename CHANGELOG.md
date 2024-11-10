@@ -1,3 +1,11 @@
+## [1.0.1](https://github.com/Aunali321/ReVancedExperiments/compare/v1.0.0...v1.0.1) (2024-11-10)
+
+
+### Bug Fixes
+
+* **telegram:** Find correct method ([197f9ee](https://github.com/Aunali321/ReVancedExperiments/commit/197f9ee4e046135a2b298861485d57b11a405099))
+* **telegram:** Use correct patch name and description ([895eabc](https://github.com/Aunali321/ReVancedExperiments/commit/895eabcec818b45baa63ffc8ad02a6ae53c05e53))
+
 ## [1.0.1-dev.2](https://github.com/Aunali321/ReVancedExperiments/compare/v1.0.1-dev.1...v1.0.1-dev.2) (2024-11-10)
 
 
