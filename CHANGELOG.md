@@ -1,3 +1,10 @@
+# 1.0.0-dev.1 (2024-11-10)
+
+
+### Features
+
+* Add patches, utils ([8452993](https://github.com/Aunali321/ReVancedExperiments/commit/84529931c0964ddba9986f66043db62393444ac2))
+
 ## [1.0.4](https://github.com/ReVanced/revanced-patches-template/compare/v1.0.3...v1.0.4) (2024-11-05)
 
 ## [1.0.4-dev.2](https://github.com/ReVanced/revanced-patches-template/compare/v1.0.4-dev.1...v1.0.4-dev.2) (2024-11-05)
