@@ -5,8 +5,8 @@ import li.auna.util.returnEarly
 
 @Suppress("unused")
 val hideAdsPatch = bytecodePatch(
-    name = "Hide sponsored ads",
-    description = "Hides sponsored ads in channels",
+    name = "Hide typing indicator",
+    description = "Hides your typing indicator from other users",
 ) {
     compatibleWith(
         "org.telegram.messenger",
