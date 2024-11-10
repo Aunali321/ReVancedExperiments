@@ -8,7 +8,7 @@ internal val hasPurchasedFingerprint = fingerprint {
     returns("Z")
     custom { methodDef, classDef ->
         classDef.type.endsWith("Lorg/kustom/billing/LicenseState;") &&
-                methodDef.name == "needSendTyping"
+                methodDef.name == "isLicensed"
     }
 }
 
