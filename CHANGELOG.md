@@ -1,3 +1,15 @@
+# [1.1.0](https://github.com/Aunali321/ReVancedExperiments/compare/v1.0.1...v1.1.0) (2024-11-11)
+
+
+### Bug Fixes
+
+* **kustom:** Find correct method ([8af3f33](https://github.com/Aunali321/ReVancedExperiments/commit/8af3f3384de35be3ea0c5f7ab9700a2ed2fe5c2c))
+
+
+### Features
+
+* **telegram:** Add Pro patch ([aa06215](https://github.com/Aunali321/ReVancedExperiments/commit/aa0621508c9aabf492612941d292a4a6601508ca))
+
 # [1.1.0-dev.1](https://github.com/Aunali321/ReVancedExperiments/compare/v1.0.2-dev.1...v1.1.0-dev.1) (2024-11-11)
 
 
