@@ -1,3 +1,10 @@
+# [1.1.0-dev.1](https://github.com/Aunali321/ReVancedExperiments/compare/v1.0.2-dev.1...v1.1.0-dev.1) (2024-11-11)
+
+
+### Features
+
+* **telegram:** Add Pro patch ([aa06215](https://github.com/Aunali321/ReVancedExperiments/commit/aa0621508c9aabf492612941d292a4a6601508ca))
+
 ## [1.0.2-dev.1](https://github.com/Aunali321/ReVancedExperiments/compare/v1.0.1...v1.0.2-dev.1) (2024-11-10)
 
 
