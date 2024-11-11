@@ -7,6 +7,10 @@ val largePauseButtonPatch = resourcePatch(
     name = "Large pause button",
     description = "Adds a large pause button to the player",
 ) {
+    compatibleWith(
+        "com.google.android.youtube",
+        "app.revanced.android.youtube"
+    )
 
     execute {
         document("res/layout/youtube_controls_button_group_layout.xml").use { document ->
