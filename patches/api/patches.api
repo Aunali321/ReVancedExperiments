@@ -247,6 +247,10 @@ public final class li/auna/patches/telegram/ads/DisableAdsPatchKt {
 	public static final fun getHideAdsPatch ()Lapp/revanced/patcher/patch/BytecodePatch;
 }
 
+public final class li/auna/patches/telegram/pro/UnlockProKt {
+	public static final fun getUnlockProPatch ()Lapp/revanced/patcher/patch/BytecodePatch;
+}
+
 public final class li/auna/patches/telegram/typingindicator/HideTypingIndicatorPatchKt {
 	public static final fun getHideAdsPatch ()Lapp/revanced/patcher/patch/BytecodePatch;
 }
