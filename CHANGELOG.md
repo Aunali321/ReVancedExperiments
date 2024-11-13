@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/Aunali321/ReVancedExperiments/compare/v1.2.0...v1.3.0) (2024-11-13)
+
+
+### Features
+
+* **Telegram:** Update `Bypass Integrity` patch ([a4bc92d](https://github.com/Aunali321/ReVancedExperiments/commit/a4bc92d0c12179302c9cf7e6d4646f051a4b778f))
+
 # [1.3.0-dev.1](https://github.com/Aunali321/ReVancedExperiments/compare/v1.2.0...v1.3.0-dev.1) (2024-11-13)
 
 
