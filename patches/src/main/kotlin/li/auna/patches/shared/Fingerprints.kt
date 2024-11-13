@@ -1,4 +1,4 @@
-package app.revanced.patches.shared
+package li.auna.patches.shared
 
 import app.revanced.patcher.fingerprint
 

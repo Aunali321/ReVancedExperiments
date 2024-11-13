@@ -1,6 +1,7 @@
 package li.auna.patches.telegram.bypassintegrity
 
 import app.revanced.patcher.Fingerprint
+import app.revanced.patcher.extensions.InstructionExtensions.addInstructions
 import app.revanced.patcher.extensions.InstructionExtensions.getInstruction
 import app.revanced.patcher.extensions.InstructionExtensions.replaceInstruction
 import app.revanced.patcher.patch.bytecodePatch
@@ -30,6 +31,15 @@ val bypassIntegrityPatch = bytecodePatch(
         }
 
         bypassIntegrityFingerprint.patch()
+        spoofSignatureFingerprint.method.apply {
+            addInstructions(
+                0,
+                """
+                   const-string v0, "49C1522548EBACD46CE322B6FD47F6092BB745D0F88082145CAF35E14DCC38E1"
+                   return-object v0
+                """
+            )
+        }
     }
 }
 
