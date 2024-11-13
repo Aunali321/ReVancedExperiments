@@ -251,6 +251,10 @@ public final class li/auna/patches/telegram/bypassintegrity/BypassIntegrityPatch
 	public static final fun getBypassIntegrityPatch ()Lapp/revanced/patcher/patch/BytecodePatch;
 }
 
+public final class li/auna/patches/telegram/downloadboost/DownloadBoostPatchKt {
+	public static final fun getDownloadBoostPatch ()Lapp/revanced/patcher/patch/BytecodePatch;
+}
+
 public final class li/auna/patches/telegram/pro/UnlockProKt {
 	public static final fun getUnlockProPatch ()Lapp/revanced/patcher/patch/BytecodePatch;
 }
