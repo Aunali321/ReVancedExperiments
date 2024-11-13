@@ -1,3 +1,10 @@
+# [1.4.0-dev.1](https://github.com/Aunali321/ReVancedExperiments/compare/v1.3.0...v1.4.0-dev.1) (2024-11-13)
+
+
+### Features
+
+* **Telegram:** Add `Download Speed Boost` patch ([00c5cc3](https://github.com/Aunali321/ReVancedExperiments/commit/00c5cc360d298729250ab3679739cd54e3a56d1d))
+
 # [1.3.0](https://github.com/Aunali321/ReVancedExperiments/compare/v1.2.0...v1.3.0) (2024-11-13)
 
 
