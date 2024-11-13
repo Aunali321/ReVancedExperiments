@@ -5,23 +5,22 @@ import app.revanced.patcher.fingerprint
 internal val isPremiumUserFingerprint = fingerprint {
     returns("Z")
     custom { methodDef, classDef ->
-        classDef.type.endsWith("Lorg/telegram/messenger/MessagesController;") &&
-                methodDef.name == "isPremiumUser"
+        methodDef.name == "isPremiumUser" && classDef.type.endsWith("Lorg/telegram/messenger/MessagesController;")
+
     }
 }
 
 internal val isPremiumFingerprint = fingerprint {
     returns("Z")
     custom { methodDef, classDef ->
-        classDef.type.endsWith("Lorg/telegram/messenger/UserConfig;") &&
-                methodDef.name == "isPremium"
+        methodDef.name == "isPremium" && classDef.type.endsWith("Lorg/telegram/messenger/UserConfig;")
     }
 }
 
 internal val isPremiumForStoryFingerprint = fingerprint {
     returns("Z")
     custom { methodDef, classDef ->
-        classDef.type.endsWith("Lorg/telegram/ui/Stories/StoriesController;") &&
-                methodDef.name == "isPremium"
+        methodDef.name == "isPremium" && classDef.type.endsWith("Lorg/telegram/ui/Stories/StoriesController;")
+
     }
 }

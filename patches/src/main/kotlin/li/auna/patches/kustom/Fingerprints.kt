@@ -7,8 +7,7 @@ internal val hasPurchasedFingerprint = fingerprint {
     accessFlags(AccessFlags.PUBLIC, AccessFlags.FINAL)
     returns("Z")
     custom { methodDef, classDef ->
-        classDef.type.endsWith("Lorg/kustom/billing/LicenseState;") &&
-                methodDef.name == "isLicensed"
+        methodDef.name == "isLicensed" && classDef.type.endsWith("Lorg/kustom/billing/LicenseState;")
     }
 }
 
@@ -16,7 +15,6 @@ internal val isPurchaseValidFingerprint = fingerprint {
     accessFlags(AccessFlags.PUBLIC, AccessFlags.FINAL)
     returns("Z")
     custom { methodDef, classDef ->
-        classDef.type.endsWith("Lorg/kustom/billing/LicenseState;") &&
-                methodDef.name == "isValid"
+        methodDef.name == "isValid" && classDef.type.endsWith("Lorg/kustom/billing/LicenseState;")
     }
 }
