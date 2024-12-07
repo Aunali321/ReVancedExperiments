@@ -9,7 +9,7 @@ val unlockProPatch = bytecodePatch(
     description = "Disable Auto Update",
 ) {
     compatibleWith(
-        "org.telegram.messenger", "org.telegram.messenger.web"
+        "org.telegram.messenger", "org.telegram.messenger.web", "uz.unnarsx.cherrygram"
     )
 
     execute {
