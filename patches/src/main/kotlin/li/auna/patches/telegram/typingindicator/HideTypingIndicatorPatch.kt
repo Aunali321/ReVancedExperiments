@@ -10,7 +10,7 @@ val hideAdsPatch = bytecodePatch(
 ) {
     compatibleWith(
         "org.telegram.messenger",
-        "org.telegram.messenger.web"
+        "org.telegram.messenger.web",
         "uz.unnarsx.cherrygram"
     )
 
