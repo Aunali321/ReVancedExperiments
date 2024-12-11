@@ -1,3 +1,10 @@
+# [1.6.0](https://github.com/Aunali321/ReVancedExperiments/compare/v1.5.0...v1.6.0) (2024-12-11)
+
+
+### Features
+
+* **Telegram:** Update `Disable Auto Updates` patch ([58468a7](https://github.com/Aunali321/ReVancedExperiments/commit/58468a7de2e55861501289c968eace16fb540fdd))
+
 # [1.6.0-dev.1](https://github.com/Aunali321/ReVancedExperiments/compare/v1.5.0...v1.6.0-dev.1) (2024-12-11)
 
 
