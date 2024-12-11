@@ -15,3 +15,17 @@ internal val checkAppUpdateFingerprint = fingerprint {
         Opcode.IF_NEZ,
     )
 }
+
+internal val setNewAppVersionAvailableFingerprint = fingerprint {
+    returns("Z")
+    custom { methodDef, classDef ->
+        methodDef.name == "setNewAppVersionAvailable" && classDef.type.endsWith("Lorg/telegram/messenger/SharedConfig;")
+    }
+}
+
+internal val blockViewUpdateFingerprint = fingerprint {
+    returns("V")
+    custom { methodDef, classDef ->
+        methodDef.name == "show" && classDef.type.endsWith("Lorg/telegram/ui/Components/BlockingUpdateView;")
+    }
+}

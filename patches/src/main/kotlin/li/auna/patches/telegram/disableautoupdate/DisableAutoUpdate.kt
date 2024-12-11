@@ -2,6 +2,7 @@ package li.auna.patches.telegram.disableautoupdate
 
 import app.revanced.patcher.extensions.InstructionExtensions.addInstruction
 import app.revanced.patcher.patch.bytecodePatch
+import li.auna.util.returnEarly
 
 @Suppress("unused")
 val unlockProPatch = bytecodePatch(
@@ -18,5 +19,7 @@ val unlockProPatch = bytecodePatch(
                 patternMatch!!.endIndex + 1, "const/4 v0, 0x0"
             )
         }
+        setNewAppVersionAvailableFingerprint.method.returnEarly(false)
+        blockViewUpdateFingerprint.method.returnEarly()
     }
 }
