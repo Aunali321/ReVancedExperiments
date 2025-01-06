@@ -1,3 +1,10 @@
+# [1.7.0-dev.1](https://github.com/Aunali321/ReVancedExperiments/compare/v1.6.0...v1.7.0-dev.1) (2025-01-06)
+
+
+### Features
+
+* **instagram:** Add `SelectableBioPatch` patch ([a20f5ae](https://github.com/Aunali321/ReVancedExperiments/commit/a20f5ae11a1ecaab5deb56e6d46f2efbf2f30a64))
+
 # [1.6.0](https://github.com/Aunali321/ReVancedExperiments/compare/v1.5.0...v1.6.0) (2024-12-11)
 
 
