@@ -30,6 +30,10 @@ public final class li/auna/patches/instagram/misc/extension/ExtensionPatchKt {
 	public static final fun getSharedExtensionPatch ()Lapp/revanced/patcher/patch/BytecodePatch;
 }
 
+public final class li/auna/patches/instagram/misc/quality/MaxMediaQualityPatchKt {
+	public static final fun getMaxMediaQualityPatch ()Lapp/revanced/patcher/patch/BytecodePatch;
+}
+
 public final class li/auna/patches/kustom/UnlockProPatchKt {
 	public static final fun getHideSubtitleToastPatch ()Lapp/revanced/patcher/patch/BytecodePatch;
 }
