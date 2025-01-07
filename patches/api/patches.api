@@ -22,6 +22,10 @@ public final class li/auna/patches/instagram/interaction/bio/SelectableBioPatchK
 	public static final fun getSelectableBioPatch ()Lapp/revanced/patcher/patch/BytecodePatch;
 }
 
+public final class li/auna/patches/instagram/layout/EnableDeveloperMenuPatchKt {
+	public static final fun getEnableDeveloperMenuPatch ()Lapp/revanced/patcher/patch/BytecodePatch;
+}
+
 public final class li/auna/patches/instagram/misc/extension/ExtensionPatchKt {
 	public static final fun getSharedExtensionPatch ()Lapp/revanced/patcher/patch/BytecodePatch;
 }
