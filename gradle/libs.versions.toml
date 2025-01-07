@@ -11,3 +11,7 @@ annotation = { module = "androidx.annotation:annotation", version.ref = "annotat
 
 [plugins]
 android-library = { id = "com.android.library", version.ref = "agp" }
+
+[libraries]
+annotation = { module = "androidx.annotation:annotation", version.ref = "annotation" }
+
