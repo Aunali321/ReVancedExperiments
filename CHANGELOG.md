@@ -1,3 +1,10 @@
+# [1.7.0-dev.2](https://github.com/Aunali321/ReVancedExperiments/compare/v1.7.0-dev.1...v1.7.0-dev.2) (2025-01-07)
+
+
+### Features
+
+* **instagram:** Add `Developer menu` patch ([29b5f46](https://github.com/Aunali321/ReVancedExperiments/commit/29b5f4682b803bf55a1092ae6634f8ec0289d005))
+
 # [1.7.0-dev.1](https://github.com/Aunali321/ReVancedExperiments/compare/v1.6.0...v1.7.0-dev.1) (2025-01-06)
 
 
