@@ -18,6 +18,22 @@ public final class li/auna/patches/all/misc/resources/AddResourcesPatchKt {
 	public static final fun getAddResourcesPatch ()Lapp/revanced/patcher/patch/ResourcePatch;
 }
 
+public final class li/auna/patches/instagram/interaction/bio/SelectableBioPatchKt {
+	public static final fun getSelectableBioPatch ()Lapp/revanced/patcher/patch/BytecodePatch;
+}
+
+public final class li/auna/patches/instagram/layout/EnableDeveloperMenuPatchKt {
+	public static final fun getEnableDeveloperMenuPatch ()Lapp/revanced/patcher/patch/BytecodePatch;
+}
+
+public final class li/auna/patches/instagram/misc/extension/ExtensionPatchKt {
+	public static final fun getSharedExtensionPatch ()Lapp/revanced/patcher/patch/BytecodePatch;
+}
+
+public final class li/auna/patches/instagram/misc/quality/MaxMediaQualityPatchKt {
+	public static final fun getMaxMediaQualityPatch ()Lapp/revanced/patcher/patch/BytecodePatch;
+}
+
 public final class li/auna/patches/kustom/UnlockProPatchKt {
 	public static final fun getHideSubtitleToastPatch ()Lapp/revanced/patcher/patch/BytecodePatch;
 }
@@ -27,13 +43,13 @@ public final class li/auna/patches/shared/misc/checks/BaseCheckEnvironmentPatchK
 }
 
 public final class li/auna/patches/shared/misc/extension/ExtensionHook {
-	public final fun getFingerprint ()Lapp/revanced/patcher/Fingerprint;
 	public final fun invoke (Lapp/revanced/patcher/patch/BytecodePatchContext;Ljava/lang/String;)V
 }
 
 public final class li/auna/patches/shared/misc/extension/SharedExtensionPatchKt {
 	public static final fun extensionHook (Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;)Lli/auna/patches/shared/misc/extension/ExtensionHook;
 	public static synthetic fun extensionHook$default (Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lli/auna/patches/shared/misc/extension/ExtensionHook;
+	public static final fun sharedExtensionPatch (Ljava/lang/String;[Lli/auna/patches/shared/misc/extension/ExtensionHook;)Lapp/revanced/patcher/patch/BytecodePatch;
 	public static final fun sharedExtensionPatch ([Lli/auna/patches/shared/misc/extension/ExtensionHook;)Lapp/revanced/patcher/patch/BytecodePatch;
 }
 
