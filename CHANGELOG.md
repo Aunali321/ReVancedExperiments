@@ -1,3 +1,10 @@
+# [1.7.0-dev.4](https://github.com/Aunali321/ReVancedExperiments/compare/v1.7.0-dev.3...v1.7.0-dev.4) (2025-01-07)
+
+
+### Features
+
+* **instagram:** Add `Hide ads` patch ([c58ae15](https://github.com/Aunali321/ReVancedExperiments/commit/c58ae158a28760fc95a41a5fc396117bbf2a8b6e))
+
 # [1.7.0-dev.3](https://github.com/Aunali321/ReVancedExperiments/compare/v1.7.0-dev.2...v1.7.0-dev.3) (2025-01-07)
 
 
