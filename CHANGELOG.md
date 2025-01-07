@@ -1,3 +1,10 @@
+# [1.7.0-dev.3](https://github.com/Aunali321/ReVancedExperiments/compare/v1.7.0-dev.2...v1.7.0-dev.3) (2025-01-07)
+
+
+### Features
+
+* **instagram:** Add `Max quality` patch ([4c893c9](https://github.com/Aunali321/ReVancedExperiments/commit/4c893c958c2de3acea036ec092101bfdd1ea68c6))
+
 # [1.7.0-dev.2](https://github.com/Aunali321/ReVancedExperiments/compare/v1.7.0-dev.1...v1.7.0-dev.2) (2025-01-07)
 
 
