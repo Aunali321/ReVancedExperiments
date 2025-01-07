@@ -1,3 +1,10 @@
+## [1.6.1](https://github.com/Aunali321/ReVancedExperiments/compare/v1.6.0...v1.6.1) (2025-01-07)
+
+
+### Bug Fixes
+
+* Remove api declaration ([f16bbb7](https://github.com/Aunali321/ReVancedExperiments/commit/f16bbb7321ab29e77ee9258d826e875405f0e225))
+
 # [1.7.0-dev.4](https://github.com/Aunali321/ReVancedExperiments/compare/v1.7.0-dev.3...v1.7.0-dev.4) (2025-01-07)
 
 
