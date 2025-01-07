@@ -18,7 +18,6 @@ public final class li/auna/patches/all/misc/resources/AddResourcesPatchKt {
 	public static final fun getAddResourcesPatch ()Lapp/revanced/patcher/patch/ResourcePatch;
 }
 
-
 public final class li/auna/patches/instagram/adblock/AdBlockPatchKt {
 	public static final fun getAdBlockPatch ()Lapp/revanced/patcher/patch/BytecodePatch;
 }
