@@ -1,7 +1,7 @@
 package li.auna.patches.instagram.adblock
 
-import app.revanced.patcher.extensions.InstructionExtensions.addInstructions
 import app.revanced.patcher.patch.bytecodePatch
+import li.auna.util.returnEarly
 
 @Suppress("unused")
 val adBlockPatch = bytecodePatch(
@@ -9,15 +9,12 @@ val adBlockPatch = bytecodePatch(
     description = "Hides ads in stories, discover, profile, etc. " +
             "An ad can still appear once when refreshing the home feed.",
 ) {
-    compatibleWith("com.instagram.android")
+    compatibleWith(
+        "com.instagram.android",
+        "com.instagram.barcelona",
+    )
 
     execute {
-        adInjectorFingerprint.method.addInstructions(
-            0,
-            """
-                const/4 v0, 0x0
-                return v0
-            """,
-        )
+        adInjectorFingerprint.method.returnEarly(false)
     }
 }
