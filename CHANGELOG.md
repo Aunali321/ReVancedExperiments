@@ -1,3 +1,10 @@
+# [1.7.0](https://github.com/Aunali321/ReVancedExperiments/compare/v1.6.1...v1.7.0) (2025-05-27)
+
+
+### Features
+
+* **instagram:** Add `BypassIntegrityPatch` patch ([b8c5fa4](https://github.com/Aunali321/ReVancedExperiments/commit/b8c5fa4b2f4c23d1fbe25651eb528b43b606fbc4))
+
 ## [1.6.1](https://github.com/Aunali321/ReVancedExperiments/compare/v1.6.0...v1.6.1) (2025-01-07)
 
 
