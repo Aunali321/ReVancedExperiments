@@ -1,3 +1,11 @@
+# [1.8.0](https://github.com/Aunali321/ReVancedExperiments/compare/v1.7.0...v1.8.0) (2025-05-28)
+
+
+### Features
+
+* **all:** Add `Deobfuscate Smob` patch ([21a9f61](https://github.com/Aunali321/ReVancedExperiments/commit/21a9f616541de548a0a6e8137ba87e0952ce7bdc))
+* **all:** Add `Deobfuscate Smob` patch ([db3f248](https://github.com/Aunali321/ReVancedExperiments/commit/db3f2486471912c9efe39c809cd065b219c9219a))
+
 # [1.7.0](https://github.com/Aunali321/ReVancedExperiments/compare/v1.6.1...v1.7.0) (2025-05-27)
 
 
