@@ -6,6 +6,10 @@ public final class app/revanced/patches/all/misc/packagename/ChangePackageNamePa
 	public static final fun setPackageNameOption (Lapp/revanced/patcher/patch/Option;)V
 }
 
+public final class li/auna/patches/all/misc/deobfuscate/DeobfuscateSmobPatchKt {
+	public static final fun getDeobfuscateSmobPatch ()Lapp/revanced/patcher/patch/BytecodePatch;
+}
+
 public final class li/auna/patches/all/misc/resources/AddResourcesPatchKt {
 	public static final fun addResource (Ljava/lang/String;Lli/auna/util/resource/BaseResource;)Z
 	public static final fun addResources (Lapp/revanced/patcher/patch/Patch;Lkotlin/jvm/functions/Function1;)Z
