@@ -21,6 +21,7 @@ import java.util.concurrent.Executors
 
 val deobfuscateSmobPatch = bytecodePatch(
     name = "Deobfuscate Smob",
+    use = false
 ) {
     execute {
         val remove = Collections.synchronizedList(mutableListOf<Triple<ClassDef, Method, Int>>())

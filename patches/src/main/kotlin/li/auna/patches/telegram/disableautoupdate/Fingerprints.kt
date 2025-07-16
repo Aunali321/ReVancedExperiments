@@ -8,12 +8,6 @@ internal val checkAppUpdateFingerprint = fingerprint {
     custom { methodDef, classDef ->
         methodDef.name == "checkAppUpdate" && classDef.type.endsWith("Lorg/telegram/ui/LaunchActivity;")
     }
-    opcodes(
-        Opcode.IF_NEZ,
-        Opcode.SGET_BOOLEAN,
-        Opcode.IF_NEZ,
-        Opcode.IF_NEZ,
-    )
 }
 
 internal val setNewAppVersionAvailableFingerprint = fingerprint {

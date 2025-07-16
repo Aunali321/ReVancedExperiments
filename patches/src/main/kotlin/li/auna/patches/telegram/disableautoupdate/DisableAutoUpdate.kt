@@ -14,11 +14,7 @@ val unlockProPatch = bytecodePatch(
     )
 
     execute {
-        checkAppUpdateFingerprint.apply {
-            method.addInstruction(
-                patternMatch!!.endIndex + 1, "const/4 v0, 0x0"
-            )
-        }
+        checkAppUpdateFingerprint.method.returnEarly(false)
         setNewAppVersionAvailableFingerprint.method.returnEarly(false)
         blockViewUpdateFingerprint.method.returnEarly()
     }
