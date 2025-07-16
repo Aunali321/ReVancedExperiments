@@ -1,3 +1,10 @@
+# [1.9.0](https://github.com/Aunali321/ReVancedExperiments/compare/v1.8.0...v1.9.0) (2025-07-16)
+
+
+### Features
+
+* **telegram:** Support latest version of telegram ([fa9c062](https://github.com/Aunali321/ReVancedExperiments/commit/fa9c062d0cc1f39ee18f5edbbbad9f3a30739cc1))
+
 # [1.8.0](https://github.com/Aunali321/ReVancedExperiments/compare/v1.7.0...v1.8.0) (2025-05-28)
 
 
