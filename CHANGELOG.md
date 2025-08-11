@@ -1,3 +1,10 @@
+# [1.10.0-dev.1](https://github.com/Aunali321/ReVancedExperiments/compare/v1.9.0...v1.10.0-dev.1) (2025-08-11)
+
+
+### Features
+
+* **Instagram:** Support latest app version ([e28fd2c](https://github.com/Aunali321/ReVancedExperiments/commit/e28fd2c262d8dd7278c3617c1ab41dd62111258b))
+
 # [1.9.0](https://github.com/Aunali321/ReVancedExperiments/compare/v1.8.0...v1.9.0) (2025-07-16)
 
 
