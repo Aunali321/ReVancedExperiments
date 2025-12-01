@@ -11,7 +11,8 @@ val unlockProPatch = bytecodePatch(
     compatibleWith(
         "org.telegram.messenger",
         "org.telegram.messenger.web",
-        "uz.unnarsx.cherrygram"
+        "uz.unnarsx.cherrygram",
+        "tw.nekomimi.nekogram"
     )
 
     execute {
