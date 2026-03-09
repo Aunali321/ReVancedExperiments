@@ -1,22 +1,20 @@
 package li.auna.patches.instagram.misc.quality
 
-import app.revanced.patcher.fingerprint
+import app.revanced.patcher.*
+import app.revanced.patcher.patch.BytecodePatchContext
 
-internal val displayMetricsFingerprint = fingerprint {
-    returns("Ljava/lang/String;")
-    strings("%sdpi; %sx%s")
+internal val BytecodePatchContext.displayMetricsMethod by gettingFirstMethodDeclaratively("%sdpi; %sx%s") {
+    returnType("Ljava/lang/String;")
 }
 
-internal val mediaSizeFingerprint = fingerprint {
-    strings("_8.jpg", "_6.jpg")
+internal val BytecodePatchContext.mediaSizeMethod by gettingFirstMethodDeclaratively("_8.jpg", "_6.jpg")
+
+internal val BytecodePatchContext.storyMediaBitrateMethod by gettingFirstMethodDeclaratively(
+    "color-format", "bitrate", "frame-rate", "i-frame-interval", "profile", "level",
+) {
+    returnType("Landroid/media/MediaFormat;")
 }
 
-internal val storyMediaBitrateFingerprint = fingerprint {
-    returns("Landroid/media/MediaFormat;")
-    strings("color-format", "bitrate", "frame-rate", "i-frame-interval", "profile", "level")
-}
-
-internal val videoEncoderConfigFingerprint = fingerprint {
-    returns("Ljava/lang/String;")
-    strings("VideoEncoderConfig{width=")
+internal val BytecodePatchContext.videoEncoderConfigMethod by gettingFirstMethodDeclaratively("VideoEncoderConfig{width=") {
+    returnType("Ljava/lang/String;")
 }

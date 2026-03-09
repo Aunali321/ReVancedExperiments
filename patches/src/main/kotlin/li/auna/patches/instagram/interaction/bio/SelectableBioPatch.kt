@@ -1,7 +1,7 @@
 package li.auna.patches.instagram.interaction.bio
 
-import app.revanced.patcher.extensions.InstructionExtensions.addInstructions
-import app.revanced.patcher.extensions.InstructionExtensions.getInstruction
+import app.revanced.patcher.extensions.addInstructions
+import app.revanced.patcher.extensions.getInstruction
 import app.revanced.patcher.patch.bytecodePatch
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction
@@ -15,8 +15,8 @@ val selectableBioPatch = bytecodePatch(
 ) {
     compatibleWith("com.instagram.android")
 
-    execute {
-        selectableBioFingerprint.method.apply {
+    apply {
+        selectableBioMethod.apply {
             val setBioTextIndex = indexOfFirstInstructionOrThrow { opcode == Opcode.INVOKE_VIRTUAL }
             val setTextViewInstruction = getInstruction<FiveRegisterInstruction>(setBioTextIndex)
             val textViewRegister = setTextViewInstruction.registerC

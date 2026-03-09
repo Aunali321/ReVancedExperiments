@@ -1,11 +1,12 @@
 package li.auna.patches.telegram.bypassintegrity
 
-import app.revanced.patcher.Fingerprint
-import app.revanced.patcher.extensions.InstructionExtensions.addInstructions
-import app.revanced.patcher.extensions.InstructionExtensions.getInstruction
-import app.revanced.patcher.extensions.InstructionExtensions.replaceInstruction
+import app.revanced.patcher.extensions.addInstructions
+import app.revanced.patcher.extensions.getInstruction
+import app.revanced.patcher.extensions.replaceInstruction
+import app.revanced.patcher.extensions.string
 import app.revanced.patcher.patch.bytecodePatch
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
+import li.auna.util.indexOfFirstInstruction
 
 @Suppress("unused")
 val bypassIntegrityPatch = bytecodePatch(
@@ -18,21 +19,24 @@ val bypassIntegrityPatch = bytecodePatch(
         "uz.unnarsx.cherrygram"
     )
 
-    execute {
-        fun Fingerprint.patch() {
-            method.apply {
-                for (index in stringMatches!!.map { it.index + 2 }) {
-                    val instructionRegister = getInstruction<OneRegisterInstruction>(index).registerA
+    apply {
+        bypassIntegrityMethod.apply {
+            val stringsToMatch = listOf("basicIntegrity", "ctsProfileMatch")
+
+            // Find indices of the matched strings and patch 2 instructions after each.
+            implementation!!.instructions.forEachIndexed { index, instruction ->
+                if (instruction.string in stringsToMatch) {
+                    val patchIndex = index + 2
+                    val instructionRegister = getInstruction<OneRegisterInstruction>(patchIndex).registerA
                     replaceInstruction(
-                        index,
+                        patchIndex,
                         "const/4 v$instructionRegister, 0x1",
                     )
                 }
             }
         }
 
-        bypassIntegrityFingerprint.patch()
-        spoofSignatureFingerprint.method.apply {
+        spoofSignatureMethod.apply {
             addInstructions(
                 0,
                 """
@@ -43,4 +47,3 @@ val bypassIntegrityPatch = bytecodePatch(
         }
     }
 }
-

@@ -1,25 +1,22 @@
 package li.auna.patches.telegram.disableautoupdate
 
-import app.revanced.patcher.fingerprint
-import com.android.tools.smali.dexlib2.Opcode
+import app.revanced.patcher.*
+import app.revanced.patcher.patch.BytecodePatchContext
 
-internal val checkAppUpdateFingerprint = fingerprint {
-    returns("V")
-    custom { methodDef, classDef ->
-        methodDef.name == "checkAppUpdate" && classDef.type.endsWith("Lorg/telegram/ui/LaunchActivity;")
-    }
+internal val BytecodePatchContext.checkAppUpdateMethod by gettingFirstMethodDeclaratively {
+    name("checkAppUpdate")
+    definingClass("LaunchActivity;")
+    returnType("V")
 }
 
-internal val setNewAppVersionAvailableFingerprint = fingerprint {
-    returns("Z")
-    custom { methodDef, classDef ->
-        methodDef.name == "setNewAppVersionAvailable" && classDef.type.endsWith("Lorg/telegram/messenger/SharedConfig;")
-    }
+internal val BytecodePatchContext.setNewAppVersionAvailableMethod by gettingFirstMethodDeclaratively {
+    name("setNewAppVersionAvailable")
+    definingClass("SharedConfig;")
+    returnType("Z")
 }
 
-internal val blockViewUpdateFingerprint = fingerprint {
-    returns("V")
-    custom { methodDef, classDef ->
-        methodDef.name == "show" && classDef.type.endsWith("Lorg/telegram/ui/Components/BlockingUpdateView;")
-    }
+internal val BytecodePatchContext.blockViewUpdateMethod by gettingFirstMethodDeclaratively {
+    name("show")
+    definingClass("BlockingUpdateView;")
+    returnType("V")
 }

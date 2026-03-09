@@ -2,28 +2,34 @@ rootProject.name = "revanced-experiments-patches"
 
 pluginManagement {
     repositories {
+        mavenLocal()
         gradlePluginPortal()
         google()
         maven {
-            name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/revanced/registry")
-            credentials {
-                username = providers.gradleProperty("gpr.user").orNull ?: System.getenv("GITHUB_ACTOR")
-                password = providers.gradleProperty("gpr.key").orNull ?: System.getenv("GITHUB_TOKEN")
-            }
+            name = "githubPackages"
+            url = uri("https://maven.pkg.github.com/revanced/revanced-patches-gradle-plugin")
+            credentials(PasswordCredentials::class)
         }
     }
 }
 
+dependencyResolutionManagement {
+    repositories {
+        mavenLocal()
+    }
+}
+
 plugins {
-    id("app.revanced.patches") version "1.0.0-dev.7"
+    id("app.revanced.patches") version "1.0.0-dev.10"
 }
 
 settings {
     extensions {
         defaultNamespace = "app.revanced.extension"
 
-        proguardFiles("../proguard-rules.pro")
+        // Must resolve to an absolute path (not relative),
+        // otherwise the extensions in subfolders will fail to find the proguard config.
+        proguardFiles(rootProject.projectDir.resolve("extensions/proguard-rules.pro").toString())
     }
 }
 

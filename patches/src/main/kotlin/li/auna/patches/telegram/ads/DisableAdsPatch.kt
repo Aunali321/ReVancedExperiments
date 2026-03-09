@@ -14,7 +14,7 @@ val hideAdsPatch = bytecodePatch(
         "uz.unnarsx.cherrygram"
     )
 
-    execute {
-        hideSponsoredMessagesFingerprint.method.returnEarly()
+    apply {
+        hideSponsoredMessagesMethod.returnEarly()
     }
 }

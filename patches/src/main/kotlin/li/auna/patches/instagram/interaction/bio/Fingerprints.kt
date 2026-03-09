@@ -1,8 +1,8 @@
 package li.auna.patches.instagram.interaction.bio
 
-import app.revanced.patcher.fingerprint
+import app.revanced.patcher.*
+import app.revanced.patcher.patch.BytecodePatchContext
 
-internal val selectableBioFingerprint = fingerprint {
-    returns("V")
-   strings("is_bio_visible")
+internal val BytecodePatchContext.selectableBioMethod by gettingFirstMethodDeclaratively("is_bio_visible") {
+    returnType("V")
 }

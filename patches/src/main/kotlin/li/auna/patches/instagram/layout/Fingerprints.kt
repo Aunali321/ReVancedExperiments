@@ -1,9 +1,9 @@
 package li.auna.patches.instagram.layout
 
-import app.revanced.patcher.fingerprint
+import app.revanced.patcher.*
+import app.revanced.patcher.patch.BytecodePatchContext
 
-internal val shouldAddPrefTTLFingerprint = fingerprint {
-    custom { methodDef, classDef ->
-        methodDef.name == "shouldAddPrefTTL" && classDef.type.endsWith("Lcom/instagram/debug/whoptions/WhitehatOptionsFragment;")
-    }
+internal val BytecodePatchContext.shouldAddPrefTTLMethod by gettingFirstMethodDeclaratively {
+    name("shouldAddPrefTTL")
+    definingClass("WhitehatOptionsFragment;")
 }

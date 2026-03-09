@@ -1,10 +1,11 @@
 package li.auna.patches.all.misc.deobfuscate
 
-import app.revanced.patcher.extensions.InstructionExtensions.getInstruction
-import app.revanced.patcher.extensions.InstructionExtensions.instructions
-import app.revanced.patcher.extensions.InstructionExtensions.instructionsOrNull
-import app.revanced.patcher.extensions.InstructionExtensions.removeInstruction
-import app.revanced.patcher.extensions.InstructionExtensions.replaceInstruction
+import app.revanced.patcher.*
+import app.revanced.patcher.extensions.getInstruction
+import app.revanced.patcher.extensions.instructions
+import app.revanced.patcher.extensions.instructionsOrNull
+import app.revanced.patcher.extensions.removeInstruction
+import app.revanced.patcher.extensions.replaceInstruction
 import app.revanced.patcher.patch.bytecodePatch
 import li.auna.util.getReference
 import com.android.tools.smali.dexlib2.AccessFlags
@@ -23,13 +24,13 @@ val deobfuscateSmobPatch = bytecodePatch(
     name = "Deobfuscate Smob",
     use = false
 ) {
-    execute {
+    apply {
         val remove = Collections.synchronizedList(mutableListOf<Triple<ClassDef, Method, Int>>())
 
         fun collectRemoveHeader() {
             val executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors())
 
-            val tasks = classes.map { classDef ->
+            val tasks = classDefs.map { classDef ->
                 Runnable {
                     classDef.methods.forEach methods@{ method ->
                         method.instructionsOrNull ?: return@methods
@@ -51,7 +52,7 @@ val deobfuscateSmobPatch = bytecodePatch(
 
         fun collectRemoveUnnecessaryInstructions() {
             val executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors())
-            val tasks = classes.map { classDef ->
+            val tasks = classDefs.map { classDef ->
                 Runnable {
                     classDef.methods.forEach methods@{ method ->
                         method.instructionsOrNull ?: return@methods
@@ -144,7 +145,7 @@ val deobfuscateSmobPatch = bytecodePatch(
 
         fun collectRemoveDuplicateInstructions() {
             val executor = Executors.newFixedThreadPool(1)
-            val tasks = classes.map { classDef ->
+            val tasks = classDefs.map { classDef ->
                 Runnable {
                     classDef.methods.forEach methods@{ method ->
                         method.instructionsOrNull ?: return@methods
@@ -223,7 +224,7 @@ val deobfuscateSmobPatch = bytecodePatch(
                 pairs.groupBy({ it.first }, { it.second })
                     .mapValues { (_, indices) -> indices.toSet().sortedDescending() }
             }
-            .entries.groupBy({ proxy(it.key).mutableClass }, { it.value }) // Group before converting to a map
+            .entries.groupBy({ firstClassDef(it.key.type) }, { it.value }) // Group before converting to a map
             .mapValues { (_, values) ->
                 values.reduce { acc, map -> acc + map } // Merge colliding entries
             }

@@ -1,5 +1,6 @@
 package li.auna.patches.instagram.misc.bypassintegrity
 
+import app.revanced.patcher.*
 import app.revanced.patcher.patch.bytecodePatch
 import li.auna.util.returnEarly
 
@@ -10,10 +11,9 @@ val signatureCheckPatch = bytecodePatch(
 ) {
     compatibleWith("com.instagram.android")
 
-    execute {
-        isValidSignatureMethodFingerprint
-            .match(isValidSignatureClassFingerprint.classDef)
-            .method
+    apply {
+        firstClassDef(isValidSignatureClassMethod.definingClass)
+            .getIsValidSignatureMethod()
             .returnEarly(true)
     }
 }

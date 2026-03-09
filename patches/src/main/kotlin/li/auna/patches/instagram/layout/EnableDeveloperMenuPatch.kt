@@ -1,6 +1,6 @@
 package li.auna.patches.instagram.layout
 
-import app.revanced.patcher.extensions.InstructionExtensions.addInstructions
+import app.revanced.patcher.extensions.addInstructions
 import app.revanced.patcher.patch.bytecodePatch
 import com.android.tools.smali.dexlib2.Opcode
 
@@ -13,10 +13,9 @@ val enableDeveloperMenuPatch = bytecodePatch(
 ) {
     compatibleWith("com.instagram.android")
 
-    execute {
-        shouldAddPrefTTLFingerprint.method.apply {
+    apply {
+        shouldAddPrefTTLMethod.apply {
             val isDeveloperMethodCallIndex = indexOfFirstInstructionOrThrow { opcode == Opcode.INVOKE_STATIC }
-
 
             val isDeveloperMethod = navigate(this).to(isDeveloperMethodCallIndex).stop()
 

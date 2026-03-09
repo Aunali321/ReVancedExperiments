@@ -1,14 +1,14 @@
 package li.auna.patches.instagram.adblock
 
-import app.revanced.patcher.fingerprint
+import app.revanced.patcher.*
+import app.revanced.patcher.patch.BytecodePatchContext
 import com.android.tools.smali.dexlib2.AccessFlags
 
-internal val adInjectorFingerprint = fingerprint {
+internal val BytecodePatchContext.adInjectorMethod by gettingFirstMethodDeclaratively(
+    "SponsoredContentController.insertItem",
+    "SponsoredContentController::Delivery",
+) {
     accessFlags(AccessFlags.PRIVATE)
-    returns("Z")
-    parameters("L", "L")
-    strings(
-        "SponsoredContentController.insertItem",
-        "SponsoredContentController::Delivery",
-    )
+    returnType("Z")
+    parameterTypes("L", "L")
 }
