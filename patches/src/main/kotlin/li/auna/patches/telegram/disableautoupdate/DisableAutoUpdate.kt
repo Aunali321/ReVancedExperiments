@@ -13,7 +13,7 @@ val unlockProPatch = bytecodePatch(
     )
 
     apply {
-        checkAppUpdateMethod.returnEarly(false)
+        checkAppUpdateMethod.returnEarly()
         setNewAppVersionAvailableMethod.returnEarly(false)
         blockViewUpdateMethod.returnEarly()
     }
