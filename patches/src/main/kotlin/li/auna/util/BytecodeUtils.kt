@@ -1,38 +1,37 @@
 package li.auna.util
 
-import app.revanced.patcher.FingerprintBuilder
-import app.revanced.patcher.extensions.InstructionExtensions.addInstruction
-import app.revanced.patcher.extensions.InstructionExtensions.addInstructions
-import app.revanced.patcher.extensions.InstructionExtensions.addInstructionsWithLabels
-import app.revanced.patcher.extensions.InstructionExtensions.getInstruction
-import app.revanced.patcher.extensions.InstructionExtensions.instructions
-import app.revanced.patcher.extensions.InstructionExtensions.removeInstruction
+import app.revanced.com.android.tools.smali.dexlib2.mutable.MutableClassDef
+import app.revanced.com.android.tools.smali.dexlib2.mutable.MutableField
+import app.revanced.com.android.tools.smali.dexlib2.mutable.MutableField.Companion.toMutable
+import app.revanced.com.android.tools.smali.dexlib2.mutable.MutableMethod
+import app.revanced.com.android.tools.smali.dexlib2.mutable.MutableMethod.Companion.toMutable
+import app.revanced.patcher.*
+import app.revanced.patcher.extensions.*
 import app.revanced.patcher.patch.BytecodePatchContext
 import app.revanced.patcher.patch.PatchException
-import app.revanced.patcher.util.proxy.mutableTypes.MutableClass
-import app.revanced.patcher.util.proxy.mutableTypes.MutableMethod
-import app.revanced.patcher.util.smali.ExternalLabel
-import li.auna.patches.shared.misc.mapping.get
+import li.auna.patches.shared.misc.mapping.ResourceType
 import li.auna.patches.shared.misc.mapping.resourceMappingPatch
-import li.auna.patches.shared.misc.mapping.resourceMappings
-import li.auna.util.InstructionUtils.Companion.branchOpcodes
-import li.auna.util.InstructionUtils.Companion.returnOpcodes
-import li.auna.util.InstructionUtils.Companion.writeOpcodes
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.Opcode.*
+import com.android.tools.smali.dexlib2.analysis.reflection.util.ReflectionUtils
+import com.android.tools.smali.dexlib2.formatter.DexFormatter
+import com.android.tools.smali.dexlib2.iface.ClassDef
 import com.android.tools.smali.dexlib2.iface.Method
-import com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction
-import com.android.tools.smali.dexlib2.iface.instruction.Instruction
-import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
-import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
-import com.android.tools.smali.dexlib2.iface.instruction.RegisterRangeInstruction
-import com.android.tools.smali.dexlib2.iface.instruction.ThreeRegisterInstruction
-import com.android.tools.smali.dexlib2.iface.instruction.TwoRegisterInstruction
-import com.android.tools.smali.dexlib2.iface.instruction.WideLiteralInstruction
+import com.android.tools.smali.dexlib2.iface.MethodParameter
+import com.android.tools.smali.dexlib2.iface.instruction.*
+import com.android.tools.smali.dexlib2.iface.reference.FieldReference
+import com.android.tools.smali.dexlib2.iface.reference.MethodReference
 import com.android.tools.smali.dexlib2.iface.reference.Reference
-import com.android.tools.smali.dexlib2.util.MethodUtil
-import java.util.EnumSet
+import com.android.tools.smali.dexlib2.iface.reference.StringReference
+import com.android.tools.smali.dexlib2.iface.value.*
+import com.android.tools.smali.dexlib2.immutable.ImmutableField
+import com.android.tools.smali.dexlib2.immutable.ImmutableMethod
+import com.android.tools.smali.dexlib2.immutable.ImmutableMethodImplementation
+import com.android.tools.smali.dexlib2.immutable.value.*
+import java.util.*
+import kotlin.apply
+import kotlin.collections.remove
 
 /**
  * Starting from and including the instruction at index [startIndex],
@@ -133,6 +132,7 @@ internal val Instruction.registersUsed: List<Int>
                 else -> listOf(registerC, registerD, registerE, registerF, registerG)
             }
         }
+
         is ThreeRegisterInstruction -> listOf(registerA, registerB, registerC)
         is TwoRegisterInstruction -> listOf(registerA, registerB)
         is OneRegisterInstruction -> listOf(registerA)
@@ -146,7 +146,7 @@ internal val Instruction.registersUsed: List<Int>
  */
 internal val Instruction.writeRegister: Int?
     get() {
-        if (this.opcode !in writeOpcodes) {
+        if (this.opcode !in InstructionUtils.writeOpcodes) {
             return null
         }
         if (this !is OneRegisterInstruction) {
@@ -159,31 +159,94 @@ internal val Instruction.writeRegister: Int?
  * @return If this instruction is an unconditional or conditional branch opcode.
  */
 internal val Instruction.isBranchInstruction: Boolean
-    get() = this.opcode in branchOpcodes
+    get() = this.opcode in InstructionUtils.branchOpcodes
 
 /**
  * @return If this instruction returns or throws.
  */
 internal val Instruction.isReturnInstruction: Boolean
-    get() = this.opcode in returnOpcodes
+    get() = this.opcode in InstructionUtils.returnOpcodes
+
+/**
+ * Find the instruction index used for a toString() StringBuilder write of a given String name.
+ *
+ * @param fieldName The name of the field to find.  Partial matches are allowed.
+ */
+private fun Method.findInstructionIndexFromToString(fieldName: String) : Int {
+    val stringIndex = indexOfFirstInstruction {
+        val reference = getReference<StringReference>()
+        reference?.string?.contains(fieldName) == true
+    }
+    if (stringIndex < 0) {
+        throw IllegalArgumentException("Could not find usage of string: '$fieldName'")
+    }
+    val stringRegister = getInstruction<OneRegisterInstruction>(stringIndex).registerA
+
+    // Find use of the string with a StringBuilder.
+    val stringUsageIndex = indexOfFirstInstruction(stringIndex) {
+        val reference = getReference<MethodReference>()
+        reference?.definingClass == "Ljava/lang/StringBuilder;" &&
+                (this as? FiveRegisterInstruction)?.registerD == stringRegister
+    }
+    if (stringUsageIndex < 0) {
+        throw IllegalArgumentException("Could not find StringBuilder usage in: $this")
+    }
+
+    // Find the next usage of StringBuilder, which should be the desired field.
+    val fieldUsageIndex = indexOfFirstInstruction(stringUsageIndex + 1) {
+        val reference = getReference<MethodReference>()
+        reference?.definingClass == "Ljava/lang/StringBuilder;" && reference.name == "append"
+    }
+    if (fieldUsageIndex < 0) {
+        // Should never happen.
+        throw IllegalArgumentException("Could not find StringBuilder append usage in: $this")
+    }
+    val fieldUsageRegister = getInstruction<FiveRegisterInstruction>(fieldUsageIndex).registerD
+
+    // Look backwards up the method to find the instruction that sets the register.
+    var fieldSetIndex = indexOfFirstInstructionReversedOrThrow(fieldUsageIndex - 1) {
+        fieldUsageRegister == writeRegister
+    }
+
+    // If the field is a method call, then adjust from MOVE_RESULT to the method call.
+    val fieldSetOpcode = getInstruction(fieldSetIndex).opcode
+    if (fieldSetOpcode == MOVE_RESULT ||
+        fieldSetOpcode == MOVE_RESULT_WIDE ||
+        fieldSetOpcode == MOVE_RESULT_OBJECT) {
+        fieldSetIndex--
+    }
+
+    return fieldSetIndex
+}
+
+/**
+ * Find the method used for a toString() StringBuilder write of a given String name.
+ *
+ * @param fieldName The name of the field to find.  Partial matches are allowed.
+ */
+context(context: BytecodePatchContext)
+internal fun Method.findMethodFromToString(fieldName: String) : MutableMethod {
+    val methodUsageIndex = findInstructionIndexFromToString(fieldName)
+    return context.navigate(this).to(methodUsageIndex).stop()
+}
+
+/**
+ * Find the field used for a toString() StringBuilder write of a given String name.
+ *
+ * @param fieldName The name of the field to find.  Partial matches are allowed.
+ */
+internal fun Method.findFieldFromToString(fieldName: String) : FieldReference {
+    val methodUsageIndex = findInstructionIndexFromToString(fieldName)
+    return getInstruction<ReferenceInstruction>(methodUsageIndex).getReference<FieldReference>()!!
+}
 
 /**
  * Adds public [AccessFlags] and removes private and protected flags (if present).
  */
-internal fun Int.toPublicAccessFlags() : Int {
+internal fun Int.toPublicAccessFlags(): Int {
     return this.or(AccessFlags.PUBLIC.value)
         .and(AccessFlags.PROTECTED.value.inv())
         .and(AccessFlags.PRIVATE.value.inv())
-}
-
-/**
- * Find the [MutableMethod] from a given [Method] in a [MutableClass].
- *
- * @param method The [Method] to find.
- * @return The [MutableMethod].
- */
-fun MutableClass.findMutableMethodOf(method: Method) = this.methods.first {
-    MethodUtil.methodSignaturesMatch(it, method)
 }
 
 /**
@@ -191,7 +254,7 @@ fun MutableClass.findMutableMethodOf(method: Method) = this.methods.first {
  *
  * @param transform The transformation function. Accepts a [MutableMethod] and returns a transformed [MutableMethod].
  */
-fun MutableClass.transformMethods(transform: MutableMethod.() -> MutableMethod) {
+fun MutableClassDef.transformMethods(transform: MutableMethod.() -> MutableMethod) {
     val transformedMethods = methods.map { it.transform() }
     methods.clear()
     methods.addAll(transformedMethods)
@@ -215,25 +278,6 @@ fun MutableMethod.injectHideViewCall(
     "invoke-static { v$viewRegister }, $classDescriptor->$targetMethod(Landroid/view/View;)V",
 )
 
-
-/**
- * Inserts instructions at a given index, using the existing control flow label at that index.
- * Inserted instructions can have it's own control flow labels as well.
- *
- * Effectively this changes the code from:
- * :label
- * (original code)
- *
- * Into:
- * :label
- * (patch code)
- * (original code)
- */
-// TODO: delete this on next major version bump.
-fun MutableMethod.addInstructionsAtControlFlowLabel(
-    insertIndex: Int,
-    instructions: String
-) = addInstructionsAtControlFlowLabel(insertIndex, instructions, *arrayOf<ExternalLabel>())
 
 /**
  * Inserts instructions at a given index, using the existing control flow label at that index.
@@ -277,10 +321,8 @@ fun MutableMethod.addInstructionsAtControlFlowLabel(
  * @throws PatchException if the resource cannot be found.
  * @see [indexOfFirstResourceIdOrThrow], [indexOfFirstLiteralInstructionReversed]
  */
-fun Method.indexOfFirstResourceId(resourceName: String): Int {
-    val resourceId = resourceMappings["id", resourceName]
-    return indexOfFirstLiteralInstruction(resourceId)
-}
+fun Method.indexOfFirstResourceId(resourceName: String): Int =
+    indexOfFirstLiteralInstruction(ResourceType.ID[resourceName])
 
 /**
  * Get the index of the first instruction with the id of the given resource name or throw a [PatchException].
@@ -351,7 +393,7 @@ fun Method.indexOfFirstLiteralInstructionOrThrow(literal: Float): Int {
  * @see indexOfFirstLiteralInstructionOrThrow
  */
 fun Method.indexOfFirstLiteralInstruction(literal: Double) =
-    indexOfFirstLiteralInstruction(literal.toRawBits().toLong())
+    indexOfFirstLiteralInstruction(literal.toRawBits())
 
 /**
  * Find the index of the first literal instruction with the given double value,
@@ -417,7 +459,7 @@ fun Method.indexOfFirstLiteralInstructionReversedOrThrow(literal: Float): Int {
  * @see indexOfFirstLiteralInstructionOrThrow
  */
 fun Method.indexOfFirstLiteralInstructionReversed(literal: Double) =
-    indexOfFirstLiteralInstructionReversed(literal.toRawBits().toLong())
+    indexOfFirstLiteralInstructionReversed(literal.toRawBits())
 
 /**
  * Find the index of the last wide literal instruction with the given double value,
@@ -458,12 +500,12 @@ fun Method.containsLiteralInstruction(literal: Double) = indexOfFirstLiteralInst
  * @param targetClass the class to start traversing the class hierarchy from.
  * @param callback function that is called for every class in the hierarchy.
  */
-fun BytecodePatchContext.traverseClassHierarchy(targetClass: MutableClass, callback: MutableClass.() -> Unit) {
+fun BytecodePatchContext.traverseClassHierarchy(targetClass: MutableClassDef, callback: MutableClassDef.() -> Unit) {
     callback(targetClass)
 
     targetClass.superclass ?: return
 
-    classBy { targetClass.superclass == it.type }?.mutableClass?.let {
+    firstClassDefOrNull(targetClass.superclass!!)?.let {
         traverseClassHierarchy(it, callback)
     }
 }
@@ -489,9 +531,10 @@ fun Method.indexOfFirstInstruction(targetOpcode: Opcode): Int = indexOfFirstInst
  * @return The index of the first opcode specified, or -1 if not found.
  * @see indexOfFirstInstructionOrThrow
  */
-fun Method.indexOfFirstInstruction(startIndex: Int = 0, targetOpcode: Opcode): Int = indexOfFirstInstruction(startIndex) {
-    opcode == targetOpcode
-}
+fun Method.indexOfFirstInstruction(startIndex: Int = 0, targetOpcode: Opcode): Int =
+    indexOfFirstInstruction(startIndex) {
+        opcode == targetOpcode
+    }
 
 /**
  * Get the index of the first [Instruction] that matches the predicate, starting from [startIndex].
@@ -526,9 +569,10 @@ fun Method.indexOfFirstInstructionOrThrow(targetOpcode: Opcode): Int = indexOfFi
  * @throws PatchException
  * @see indexOfFirstInstruction
  */
-fun Method.indexOfFirstInstructionOrThrow(startIndex: Int = 0, targetOpcode: Opcode): Int = indexOfFirstInstructionOrThrow(startIndex) {
-    opcode == targetOpcode
-}
+fun Method.indexOfFirstInstructionOrThrow(startIndex: Int = 0, targetOpcode: Opcode): Int =
+    indexOfFirstInstructionOrThrow(startIndex) {
+        opcode == targetOpcode
+    }
 
 /**
  * Get the index of the first [Instruction] that matches the predicate, starting from [startIndex].
@@ -554,9 +598,10 @@ fun Method.indexOfFirstInstructionOrThrow(startIndex: Int = 0, filter: Instructi
  * @return -1 if the instruction is not found.
  * @see indexOfFirstInstructionReversedOrThrow
  */
-fun Method.indexOfFirstInstructionReversed(startIndex: Int? = null, targetOpcode: Opcode): Int = indexOfFirstInstructionReversed(startIndex) {
-    opcode == targetOpcode
-}
+fun Method.indexOfFirstInstructionReversed(startIndex: Int? = null, targetOpcode: Opcode): Int =
+    indexOfFirstInstructionReversed(startIndex) {
+        opcode == targetOpcode
+    }
 
 /**
  * Get the index of matching instruction,
@@ -587,15 +632,16 @@ fun Method.indexOfFirstInstructionReversed(targetOpcode: Opcode): Int = indexOfF
 
 /**
  * Get the index of matching instruction,
- * starting from and [startIndex] and searching down.
+ * starting from [startIndex] and searching down.
  *
  * @param startIndex Optional starting index to search down from. Searching includes the start index.
  * @return The index of the instruction.
  * @see indexOfFirstInstructionReversed
  */
-fun Method.indexOfFirstInstructionReversedOrThrow(startIndex: Int? = null, targetOpcode: Opcode): Int = indexOfFirstInstructionReversedOrThrow(startIndex) {
-    opcode == targetOpcode
-}
+fun Method.indexOfFirstInstructionReversedOrThrow(startIndex: Int? = null, targetOpcode: Opcode): Int =
+    indexOfFirstInstructionReversedOrThrow(startIndex) {
+        opcode == targetOpcode
+    }
 
 /**
  * Get the index of matching instruction,
@@ -609,7 +655,7 @@ fun Method.indexOfFirstInstructionReversedOrThrow(targetOpcode: Opcode): Int = i
 
 /**
  * Get the index of matching instruction,
- * starting from and [startIndex] and searching down.
+ * starting from [startIndex] and searching down.
  *
  * @param startIndex Optional starting index to search down from. Searching includes the start index.
  * @return The index of the instruction.
@@ -652,7 +698,8 @@ fun Method.findInstructionIndicesReversedOrThrow(filter: Instruction.() -> Boole
  *  _Returns an empty list if no indices are found_
  * @see findInstructionIndicesReversedOrThrow
  */
-fun Method.findInstructionIndicesReversed(opcode: Opcode): List<Int> = findInstructionIndicesReversed { this.opcode == opcode }
+fun Method.findInstructionIndicesReversed(opcode: Opcode): List<Int> =
+    findInstructionIndicesReversed { this.opcode == opcode }
 
 /**
  * @return An immutable list of indices of the opcode in reverse order.
@@ -670,8 +717,12 @@ fun Method.findInstructionIndicesReversedOrThrow(opcode: Opcode): List<Int> {
  * Suitable for calls to extension code to override boolean and integer values.
  */
 internal fun MutableMethod.insertLiteralOverride(literal: Long, extensionMethodDescriptor: String) {
-    // TODO: make this work with objects and wide values.
     val literalIndex = indexOfFirstLiteralInstructionOrThrow(literal)
+    insertLiteralOverride(literalIndex, extensionMethodDescriptor)
+}
+
+internal fun MutableMethod.insertLiteralOverride(literalIndex: Int, extensionMethodDescriptor: String) {
+    // TODO: make this work with objects and wide primitive values.
     val index = indexOfFirstInstructionOrThrow(literalIndex, MOVE_RESULT)
     val register = getInstruction<OneRegisterInstruction>(index).registerA
 
@@ -686,7 +737,7 @@ internal fun MutableMethod.insertLiteralOverride(literal: Long, extensionMethodD
         """
             $operation, $extensionMethodDescriptor
             move-result v$register
-        """
+        """,
     )
 }
 
@@ -695,80 +746,619 @@ internal fun MutableMethod.insertLiteralOverride(literal: Long, extensionMethodD
  */
 internal fun MutableMethod.insertLiteralOverride(literal: Long, override: Boolean) {
     val literalIndex = indexOfFirstLiteralInstructionOrThrow(literal)
+    return insertLiteralOverride(literalIndex, override)
+}
+
+/**
+ * Constant value override of the first MOVE_RESULT after the index parameter.
+ */
+internal fun MutableMethod.insertLiteralOverride(literalIndex: Int, override: Boolean) {
     val index = indexOfFirstInstructionOrThrow(literalIndex, MOVE_RESULT)
     val register = getInstruction<OneRegisterInstruction>(index).registerA
     val overrideValue = if (override) "0x1" else "0x0"
 
     addInstruction(
         index + 1,
-        "const v$register, $overrideValue"
+        "const v$register, $overrideValue",
     )
 }
 
 /**
- * Called for _all_ instructions with the given literal value.
+ * Iterates all instructions as sequence in all methods of all classes in the [BytecodePatchContext].
+ *
+ * @param match A function that matches instructions. If a match is found, it returns a value of type [T], otherwise null.
+ * @param transform A function that transforms the matched instruction using the mutable method and the matched value
+ * of type [T].
  */
-fun BytecodePatchContext.forEachLiteralValueInstruction(
-    literal: Long,
-    block: MutableMethod.(literalInstructionIndex: Int) -> Unit,
+fun <T> BytecodePatchContext.forEachInstructionAsSequence(
+    match: (classDef: ClassDef, method: Method, instruction: Instruction, index: Int) -> T?,
+    transform: (MutableMethod, T) -> Unit
 ) {
-    classes.forEach { classDef ->
-        classDef.methods.forEach { method ->
-            method.implementation?.instructions?.forEachIndexed { index, instruction ->
-                if (instruction.opcode == CONST &&
-                    (instruction as WideLiteralInstruction).wideLiteral == literal
-                ) {
-                    val mutableMethod = proxy(classDef).mutableClass.findMutableMethodOf(method)
-                    block.invoke(mutableMethod, index)
+    classDefs.flatMap { classDef ->
+        classDef.methods.mapNotNull { method ->
+            val matches = method.instructionsOrNull?.mapIndexedNotNull { index, instruction ->
+                match(classDef, method, instruction, index)
+            } ?: return@mapNotNull null
+
+            if (matches.any()) method to matches else null
+        }
+    }.forEach { (method, matches) ->
+
+        val method = firstMethod(method)
+        val matches = matches.toCollection(ArrayDeque())
+
+        while (!matches.isEmpty()) transform(method, matches.removeLast())
+    }
+}
+
+private fun MutableMethod.checkReturnType(expectedTypes: Iterable<Class<*>>) {
+    val returnTypeJava = ReflectionUtils.dexToJavaName(returnType)
+    check(expectedTypes.any { returnTypeJava == it.name }) {
+        "Actual return type $returnTypeJava is not contained in expected types: $expectedTypes"
+    }
+
+}
+
+/**
+ * Additional registers effectively take the place of the pX parameters (p0, p1, p2, etc.)
+ * and contain the original contents of the method parameters.
+ * Added registers always start at index: `originalMethod.implementation!!.registerCount` of the
+ * original uncloned method.
+ *
+ * **Fingerprint match indexes will be increased positively by [numberOfParameterRegistersLogical]**.
+ */
+context(_: BytecodePatchContext)
+fun Method.cloneMutableAndPreserveParameters() =
+    cloneMutableAndPreserveParameters(classDef)
+
+/**
+ * Additional registers effectively take the place of the pX parameters (p0, p1, p2, etc.)
+ * and contain the original contents of the method parameters.
+ * Added registers always start at index: `originalMethod.implementation!!.registerCount` of the
+ * original uncloned method.
+ *
+ * **Fingerprint match indexes will be increased positively by [numberOfParameterRegistersLogical]**.
+ */
+fun Method.cloneMutableAndPreserveParameters(mutableClassDef : MutableClassDef) : MutableMethod {
+    check (!AccessFlags.STATIC.isSet(accessFlags) || parameters.isNotEmpty()) {
+        "Static methods have no parameter registers to preserve"
+    }
+
+    val clonedMethod = cloneMutable(
+        additionalRegisters = numberOfParameterRegisters
+    )
+
+    // Replace existing method with cloned with more registers.
+    mutableClassDef.methods.apply {
+        remove(this@cloneMutableAndPreserveParameters)
+        add(clonedMethod)
+    }
+
+    return clonedMethod
+}
+
+// Adapted from BiliRoamingX:
+// https://github.com/BiliRoamingX/BiliRoamingX/blob/ae58109f3acdd53ec2d2b3fb439c2a2ef1886221/patches/src/main/kotlin/app/revanced/patches/bilibili/utils/Extenstions.kt#L51
+/**
+ * Additional registers effectively take the place of the pX parameters (p0, p1, p2, etc.)
+ * and contain the original contents of the method parameters.
+ * Added registers always start at index: `originalMethod.implementation!!.registerCount` of the
+ * original uncloned method.
+ *
+ * **Fingerprint match indexes will be increased positively by [additionalRegisters]**.
+ */
+fun Method.cloneMutable(
+    name: String = this.name,
+    accessFlags: Int = this.accessFlags,
+    parameters: List<MethodParameter> = this.parameters,
+    returnType: String = this.returnType,
+    additionalRegisters: Int = 0,
+): MutableMethod {
+    check(additionalRegisters >= 0) {
+        "Additional registers cannot be negative"
+    }
+
+    val implementationExists = implementation != null
+    val oldFirstParameterRegister = if (implementationExists) p0Register else 0
+
+    val clonedImplementation = implementation?.let {
+        ImmutableMethodImplementation(
+            it.registerCount + additionalRegisters,
+            it.instructions,
+            it.tryBlocks,
+            it.debugItems,
+        )
+    }
+
+    return ImmutableMethod(
+        definingClass,
+        name,
+        parameters,
+        returnType,
+        accessFlags,
+        annotations,
+        hiddenApiRestrictions,
+        clonedImplementation
+    ).toMutable().apply {
+        var insertIndex = 0
+        var addedInstructions = 0
+        val isNotStatic = !AccessFlags.STATIC.isSet(accessFlags)
+
+        if (implementationExists && additionalRegisters > 0 && (parameters.isNotEmpty() || isNotStatic)) {
+            var destReg = oldFirstParameterRegister
+            var pReg = 0
+
+            // Handle `this`.
+            if (isNotStatic) {
+                addInstructions(insertIndex++, "move-object/from16 v$destReg, p$pReg")
+                addedInstructions++
+                destReg += 1
+                pReg += 1
+            }
+
+            // Handle method parameters.
+            for (parameter in parameters) {
+                val opcode = when (parameter.type) {
+                    "J", "D" -> "move-wide/from16"
+                    else -> {
+                        if (parameter.type.startsWith('L') || parameter.type.startsWith('[')) {
+                            "move-object/from16"
+                        } else {
+                            "move/from16"
+                        }
+                    }
                 }
+
+                addInstructions(insertIndex++, "$opcode v$destReg, p$pReg")
+                addedInstructions++
+
+                val width = if (opcode.startsWith("move-wide")) 2 else 1
+                destReg += width
+                pReg += width
+            }
+
+            if (addedInstructions != numberOfParameterRegistersLogical) {
+                throw IllegalStateException(
+                    "Added instructions do not match additional registers " +
+                            "addedInstructions: $addedInstructions " +
+                            "numberOfParameterRegistersLogical: $numberOfParameterRegistersLogical"
+                )
             }
         }
     }
 }
 
 /**
- * Overrides the first instruction of a method with a constant return value.
- * None of the method code will ever execute.
+ * @return The number of registers for all parameters, including p0.
+ * This includes 2 registers for each wide parameter.
  */
-fun MutableMethod.returnEarly(overrideValue: Boolean = false) = overrideReturnValue(overrideValue, false)
+val Method.numberOfParameterRegisters: Int
+    get() {
+        var count = 0
+
+        if (!AccessFlags.STATIC.isSet(accessFlags)) {
+            count += 1
+        }
+
+        for (param in parameters) {
+            count += when (param.type) {
+                "J", "D" -> 2   // wide
+                else -> 1       // normal
+            }
+        }
+
+        return count
+    }
 
 /**
- * Overrides all return statements with a constant value.
+ * @return The number of parameter registers, including p0 as 'this' if method is not static.
+ *   This differs from [numberOfParameterRegisters] in that long/double parameters are counted only once each.
+ */
+val Method.numberOfParameterRegistersLogical: Int
+    get() = parameters.count() + if (AccessFlags.STATIC.isSet(accessFlags)) {
+        0
+    } else {
+        1
+    }
+
+/**
+ * @return the actual register number of p0 for this method.
+ * Throws if the method has no implementation.
+ */
+val Method.p0Register: Int
+    get() {
+        val impl = implementation ?: throw IllegalStateException("Method has no implementation: $this")
+        var paramRegs = 0
+
+        // Count explicit parameters (wide types take 2 registers).
+        for (type in this.parameterTypes) {
+            paramRegs += if (type == "J" || type == "D") 2 else 1
+        }
+
+        // Add implicit 'this' for non-static methods.
+        if (!AccessFlags.STATIC.isSet(this.accessFlags)) {
+            paramRegs += 1
+        }
+
+        val totalRegs = impl.registerCount
+
+        return totalRegs - paramRegs
+    }
+
+private const val RETURN_TYPE_MISMATCH = "Mismatch between override type and Method return type"
+
+/**
+ * Overrides the first instruction of a method with returning the default value for the type (or `void`).
+ * None of the method code will ever execute.
+ *
+ * @see returnLate
+ */
+fun MutableMethod.returnEarly() {
+    val value = when (returnType) {
+        "V" -> null
+        "Z" -> ImmutableBooleanEncodedValue.FALSE_VALUE
+        "B" -> ImmutableByteEncodedValue(0)
+        "S" -> ImmutableShortEncodedValue(0)
+        "C" -> ImmutableCharEncodedValue(Char.MIN_VALUE)
+        "I" -> ImmutableIntEncodedValue(0)
+        "F" -> ImmutableFloatEncodedValue(0f)
+        "J" -> ImmutableLongEncodedValue(0)
+        "D" -> ImmutableDoubleEncodedValue(0.0)
+        else -> ImmutableNullEncodedValue.INSTANCE
+    }
+    overrideReturnValue(value, false)
+}
+
+private fun MutableMethod.returnString(value: String, late: Boolean) {
+    checkReturnType(String::class.java.allAssignableTypes())
+    overrideReturnValue(ImmutableStringEncodedValue(value), late)
+}
+
+/**
+ * Overrides the first instruction of a method with a constant `String` return value.
+ * None of the method code will ever execute.
+ *
+ * @see returnLate
+ */
+fun MutableMethod.returnEarly(value: String) = returnString(value, false)
+
+/**
+ * Overrides all return statements with a constant `String` value.
  * All method code is executed the same as unpatched.
  *
  * @see returnEarly
  */
-internal fun MutableMethod.returnLate(overrideValue: Boolean = false) = overrideReturnValue(overrideValue, true)
+fun MutableMethod.returnLate(value: String) = returnString(value, true)
 
-private fun MutableMethod.overrideReturnValue(bool: Boolean, returnLate: Boolean) {
-    val const = if (bool) "0x1" else "0x0"
+private fun MutableMethod.returnByte(value: Byte, late: Boolean) {
+    checkReturnType(Byte::class.javaObjectType.allAssignableTypes() + Byte::class.javaPrimitiveType!!)
+    overrideReturnValue(ImmutableByteEncodedValue(value), late)
+}
 
-    val instructions = when (returnType.first()) {
-        'L' -> {
-            """
-                const/4 v0, $const
+/**
+ * Overrides the first instruction of a method with a constant `Byte` return value.
+ * None of the method code will ever execute.
+ *
+ * @see returnLate
+ */
+fun MutableMethod.returnEarly(value: Byte) = returnByte(value, false)
+
+/**
+ * Overrides all return statements with a constant `Byte` value.
+ * All method code is executed the same as unpatched.
+ *
+ * @see returnEarly
+ */
+fun MutableMethod.returnLate(value: Byte) = returnByte(value, true)
+
+private fun MutableMethod.returnBoolean(value: Boolean, late: Boolean) {
+    checkReturnType(Boolean::class.javaObjectType.allAssignableTypes() + Boolean::class.javaPrimitiveType!!)
+    overrideReturnValue(ImmutableBooleanEncodedValue.forBoolean(value), late)
+}
+
+/**
+ * Overrides the first instruction of a method with a constant `Boolean` return value.
+ * None of the method code will ever execute.
+ *
+ * @see returnLate
+ */
+fun MutableMethod.returnEarly(value: Boolean) = returnBoolean(value, false)
+
+/**
+ * Overrides all return statements with a constant `Boolean` value.
+ * All method code is executed the same as unpatched.
+ *
+ * @see returnEarly
+ */
+fun MutableMethod.returnLate(value: Boolean) = returnBoolean(value, true)
+
+private fun MutableMethod.returnShort(value: Short, late: Boolean) {
+    checkReturnType(Short::class.javaObjectType.allAssignableTypes() + Short::class.javaPrimitiveType!!)
+    overrideReturnValue(ImmutableShortEncodedValue(value), late)
+}
+
+/**
+ * Overrides the first instruction of a method with a constant `Short` return value.
+ * None of the method code will ever execute.
+ *
+ * @see returnLate
+ */
+fun MutableMethod.returnEarly(value: Short) = returnShort(value, false)
+
+/**
+ * Overrides all return statements with a constant `Short` value.
+ * All method code is executed the same as unpatched.
+ *
+ * @see returnEarly
+ */
+fun MutableMethod.returnLate(value: Short) = returnShort(value, true)
+
+private fun MutableMethod.returnChar(value: Char, late: Boolean) {
+    checkReturnType(Char::class.javaObjectType.allAssignableTypes() + Char::class.javaPrimitiveType!!)
+    overrideReturnValue(ImmutableCharEncodedValue(value), late)
+}
+
+/**
+ * Overrides the first instruction of a method with a constant `Char` return value.
+ * None of the method code will ever execute.
+ *
+ * @see returnLate
+ */
+fun MutableMethod.returnEarly(value: Char) = returnChar(value, false)
+
+/**
+ * Overrides all return statements with a constant `Char` value.
+ * All method code is executed the same as unpatched.
+ *
+ * @see returnEarly
+ */
+fun MutableMethod.returnLate(value: Char) = returnChar(value, true)
+
+private fun MutableMethod.returnInt(value: Int, late: Boolean) {
+    checkReturnType(Int::class.javaObjectType.allAssignableTypes() + Int::class.javaPrimitiveType!!)
+    overrideReturnValue(ImmutableIntEncodedValue(value), late)
+}
+
+/**
+ * Overrides the first instruction of a method with a constant `Int` return value.
+ * None of the method code will ever execute.
+ *
+ * @see returnLate
+ */
+fun MutableMethod.returnEarly(value: Int) = returnInt(value, false)
+
+/**
+ * Overrides all return statements with a constant `Int` value.
+ * All method code is executed the same as unpatched.
+ *
+ * @see returnEarly
+ */
+fun MutableMethod.returnLate(value: Int) = returnInt(value, true)
+
+private fun MutableMethod.returnFloat(value: Float, late: Boolean) {
+    checkReturnType(Float::class.javaObjectType.allAssignableTypes() + Float::class.javaPrimitiveType!!)
+    overrideReturnValue(ImmutableFloatEncodedValue(value), late)
+}
+
+/**
+ * Overrides the first instruction of a method with a constant `Float` return value.
+ * None of the method code will ever execute.
+ *
+ * @see returnLate
+ */
+fun MutableMethod.returnEarly(value: Float) = returnFloat(value, false)
+
+/**
+ * Overrides all return statements with a constant `Float` value.
+ * All method code is executed the same as unpatched.
+ *
+ * @see returnEarly
+ */
+fun MutableMethod.returnLate(value: Float) = returnFloat(value, true)
+
+private fun MutableMethod.returnLong(value: Long, late: Boolean) {
+    checkReturnType(Long::class.javaObjectType.allAssignableTypes() + Long::class.javaPrimitiveType!!)
+    overrideReturnValue(ImmutableLongEncodedValue(value), late)
+}
+
+/**
+ * Overrides the first instruction of a method with a constant `Long` return value.
+ * None of the method code will ever execute.
+ *
+ * @see returnLate
+ */
+fun MutableMethod.returnEarly(value: Long) = returnLong(value, false)
+
+/**
+ * Overrides all return statements with a constant `Long` value.
+ * All method code is executed the same as unpatched.
+ *
+ * @see returnEarly
+ */
+fun MutableMethod.returnLate(value: Long) = returnLong(value, true)
+
+private fun MutableMethod.returnDouble(value: Double, late: Boolean) {
+    checkReturnType(Double::class.javaObjectType.allAssignableTypes() + Double::class.javaPrimitiveType!!)
+    overrideReturnValue(ImmutableDoubleEncodedValue(value), late)
+}
+
+/**
+ * Overrides the first instruction of a method with a constant `Double` return value.
+ * None of the method code will ever execute.
+ *
+ * @see returnLate
+ */
+fun MutableMethod.returnEarly(value: Double) = returnDouble(value, false)
+
+/**
+ * Overrides all return statements with a constant `Double` value.
+ * All method code is executed the same as unpatched.
+ *
+ * @see returnEarly
+ */
+fun MutableMethod.returnLate(value: Double) = returnDouble(value, true)
+
+private fun MutableMethod.overrideReturnValue(value: EncodedValue?, returnLate: Boolean) {
+    val instructions = if (value == null) {
+        require(!returnLate) {
+            "Cannot return late for method of void type"
+        }
+        "return-void"
+    } else {
+        val encodedValue = DexFormatter.INSTANCE.getEncodedValue(value)
+        when (value) {
+            is NullEncodedValue -> {
+                """
+                const/4 v0, 0x0
                 return-object v0
-            """
-        }
+                """
+            }
 
-        'V' -> {
-            if (returnLate) throw IllegalArgumentException("Cannot return late for method of void type")
-            "return-void"
-        }
+            is StringEncodedValue -> {
+                """
+                const-string v0, $encodedValue
+                return-object v0
+                """
+            }
 
-        'I', 'Z' -> {
-            """
-                const/4 v0, $const
-                return v0
-            """
-        }
+            is ByteEncodedValue -> {
+                if (returnType == "B") {
+                    """
+                    const/4 v0, $encodedValue
+                    return v0
+                    """
+                } else {
+                    """
+                    const/4 v0, $encodedValue
+                    invoke-static { v0 }, Ljava/lang/Byte;->valueOf(B)Ljava/lang/Byte;
+                    move-result-object v0
+                    return-object v0
+                    """
+                }
+            }
 
-        else -> throw Exception("Return type is not supported: $this")
+            is BooleanEncodedValue -> {
+                val encodedValue = value.value.toHexString()
+                if (returnType == "Z") {
+                    """
+                    const/4 v0, $encodedValue
+                    return v0
+                    """
+                } else {
+                    """
+                    const/4 v0, $encodedValue
+                    invoke-static { v0 }, Ljava/lang/Boolean;->valueOf(Z)Ljava/lang/Boolean;
+                    move-result-object v0
+                    return-object v0
+                    """
+                }
+            }
+
+            is ShortEncodedValue -> {
+                if (returnType == "S") {
+                    """
+                    const/16 v0, $encodedValue
+                    return v0
+                    """
+                } else {
+                    """
+                    const/16 v0, $encodedValue
+                    invoke-static { v0 }, Ljava/lang/Short;->valueOf(S)Ljava/lang/Short;
+                    move-result-object v0
+                    return-object v0
+                    """
+                }
+            }
+
+            is CharEncodedValue -> {
+                if (returnType == "C") {
+                    """
+                    const/16 v0, $encodedValue
+                    return v0
+                    """
+                } else {
+                    """
+                    const/16 v0, $encodedValue
+                    invoke-static { v0 }, Ljava/lang/Character;->valueOf(C)Ljava/lang/Character;
+                    move-result-object v0
+                    return-object v0
+                    """
+                }
+            }
+
+            is IntEncodedValue -> {
+                if (returnType == "I") {
+                    """
+                    const v0, $encodedValue
+                    return v0
+                    """
+                } else {
+                    """
+                    const v0, $encodedValue
+                    invoke-static { v0 }, Ljava/lang/Integer;->valueOf(I)Ljava/lang/Integer;
+                    move-result-object v0
+                    return-object v0
+                    """
+                }
+            }
+
+            is FloatEncodedValue -> {
+                val encodedValue = "${encodedValue}f"
+                if (returnType == "F") {
+                    """
+                    const v0, $encodedValue
+                    return v0
+                    """
+                } else {
+                    """
+                    const v0, $encodedValue
+                    invoke-static { v0 }, Ljava/lang/Float;->valueOf(F)Ljava/lang/Float;
+                    move-result-object v0
+                    return-object v0
+                    """
+                }
+            }
+
+            is LongEncodedValue -> {
+                val encodedValue = "${encodedValue}L"
+                if (returnType == "J") {
+                    """
+                    const-wide v0, $encodedValue
+                    return-wide v0
+                    """
+                } else {
+                    """
+                    const-wide v0, $encodedValue
+                    invoke-static { v0 }, Ljava/lang/Long;->valueOf(J)Ljava/lang/Long;
+                    move-result-object v0
+                    return-object v0
+                    """
+                }
+            }
+
+            is DoubleEncodedValue -> {
+                if (returnType == "D") {
+                    """
+                    const-wide v0, $encodedValue
+                    return-wide v0
+                    """
+                } else {
+                    """
+                    const-wide v0, $encodedValue
+                    invoke-static { v0 }, Ljava/lang/Double;->valueOf(D)Ljava/lang/Double;
+                    move-result-object v0
+                    return-object v0
+                    """
+                }
+            }
+
+            else -> throw IllegalArgumentException("Value $value cannot be returned from $this")
+        }
     }
 
     if (returnLate) {
-        findInstructionIndicesReversed {
-            opcode == RETURN || opcode == RETURN_OBJECT
+        findInstructionIndicesReversedOrThrow {
+            opcode == RETURN || opcode == RETURN_WIDE || opcode == RETURN_OBJECT
         }.forEach { index ->
             addInstructionsAtControlFlowLabel(index, instructions)
         }
@@ -778,68 +1368,106 @@ private fun MutableMethod.overrideReturnValue(bool: Boolean, returnLate: Boolean
 }
 
 /**
- * Set the custom condition for this fingerprint to check for a literal value.
- *
- * @param literalSupplier The supplier for the literal value to check for.
+ * Remove the given AccessFlags from the field.
  */
-// TODO: add a way for subclasses to also use their own custom fingerprint.
-fun FingerprintBuilder.literal(literalSupplier: () -> Long) {
-    custom { method, _ ->
-        method.containsLiteralInstruction(literalSupplier())
+internal fun MutableField.removeFlags(vararg flags: AccessFlags) {
+    val bitField = flags.map { it.value }.reduce { acc, flag -> acc and flag }
+    this.accessFlags = this.accessFlags and bitField.inv()
+}
+
+internal fun BytecodePatchContext.addStaticFieldToExtension(
+    type: String,
+    methodName: String,
+    fieldName: String,
+    objectClass: String,
+    smaliInstructions: String
+) {
+    val mutableClass = firstClassDef(type)
+    val objectCall = "$mutableClass->$fieldName:$objectClass"
+
+    mutableClass.apply {
+        methods.first { method -> method.name == methodName }.apply {
+            staticFields.add(
+                ImmutableField(
+                    definingClass,
+                    fieldName,
+                    objectClass,
+                    AccessFlags.PUBLIC.value or AccessFlags.STATIC.value,
+                    null,
+                    annotations,
+                    null
+                ).toMutable()
+            )
+
+            addInstructionsWithLabels(
+                0,
+                """
+                    sget-object v0, $objectCall
+                """ + smaliInstructions
+            )
+        }
     }
 }
 
-private class InstructionUtils {
-    companion object {
-        val branchOpcodes: EnumSet<Opcode> = EnumSet.of(
-            GOTO, GOTO_16, GOTO_32,
-            IF_EQ, IF_NE, IF_LT, IF_GE, IF_GT, IF_LE,
-            IF_EQZ, IF_NEZ, IF_LTZ, IF_GEZ, IF_GTZ, IF_LEZ,
-            PACKED_SWITCH_PAYLOAD, SPARSE_SWITCH_PAYLOAD
-        )
+/**
+ * Set the custom condition for this predicate to check for a literal value.
+ *
+ * @param literalSupplier The supplier for the literal value to check for.
+ */
+@Deprecated("Instead use `literal()`")
+fun MutablePredicateList<Method>.literal(literalSupplier: () -> Long) {
+    custom { containsLiteralInstruction(literalSupplier()) }
+}
 
-        val returnOpcodes: EnumSet<Opcode> = EnumSet.of(
-            RETURN_VOID, RETURN, RETURN_WIDE, RETURN_OBJECT, RETURN_VOID_NO_BARRIER,
-            THROW
-        )
+private object InstructionUtils {
+    val branchOpcodes: EnumSet<Opcode> = EnumSet.of(
+        GOTO, GOTO_16, GOTO_32,
+        IF_EQ, IF_NE, IF_LT, IF_GE, IF_GT, IF_LE,
+        IF_EQZ, IF_NEZ, IF_LTZ, IF_GEZ, IF_GTZ, IF_LEZ,
+        PACKED_SWITCH_PAYLOAD, SPARSE_SWITCH_PAYLOAD
+    )
 
-        val writeOpcodes: EnumSet<Opcode> = EnumSet.of(
-            ARRAY_LENGTH,
-            INSTANCE_OF,
-            NEW_INSTANCE, NEW_ARRAY,
-            MOVE, MOVE_FROM16, MOVE_16, MOVE_WIDE, MOVE_WIDE_FROM16, MOVE_WIDE_16, MOVE_OBJECT,
-            MOVE_OBJECT_FROM16, MOVE_OBJECT_16, MOVE_RESULT, MOVE_RESULT_WIDE, MOVE_RESULT_OBJECT, MOVE_EXCEPTION,
-            CONST, CONST_4, CONST_16, CONST_HIGH16, CONST_WIDE_16, CONST_WIDE_32,
-            CONST_WIDE, CONST_WIDE_HIGH16, CONST_STRING, CONST_STRING_JUMBO,
-            IGET, IGET_WIDE, IGET_OBJECT, IGET_BOOLEAN, IGET_BYTE, IGET_CHAR, IGET_SHORT,
-            IGET_VOLATILE, IGET_WIDE_VOLATILE, IGET_OBJECT_VOLATILE,
-            SGET, SGET_WIDE, SGET_OBJECT, SGET_BOOLEAN, SGET_BYTE, SGET_CHAR, SGET_SHORT,
-            SGET_VOLATILE, SGET_WIDE_VOLATILE, SGET_OBJECT_VOLATILE,
-            AGET, AGET_WIDE, AGET_OBJECT, AGET_BOOLEAN, AGET_BYTE, AGET_CHAR, AGET_SHORT,
-            // Arithmetic and logical operations.
-            ADD_DOUBLE_2ADDR, ADD_DOUBLE, ADD_FLOAT_2ADDR, ADD_FLOAT, ADD_INT_2ADDR,
-            ADD_INT_LIT8, ADD_INT, ADD_LONG_2ADDR, ADD_LONG, ADD_INT_LIT16,
-            AND_INT_2ADDR, AND_INT_LIT8, AND_INT_LIT16, AND_INT, AND_LONG_2ADDR, AND_LONG,
-            DIV_DOUBLE_2ADDR, DIV_DOUBLE, DIV_FLOAT_2ADDR, DIV_FLOAT, DIV_INT_2ADDR,
-            DIV_INT_LIT16, DIV_INT_LIT8, DIV_INT, DIV_LONG_2ADDR, DIV_LONG,
-            DOUBLE_TO_FLOAT, DOUBLE_TO_INT, DOUBLE_TO_LONG,
-            FLOAT_TO_DOUBLE, FLOAT_TO_INT, FLOAT_TO_LONG,
-            INT_TO_BYTE, INT_TO_CHAR, INT_TO_DOUBLE, INT_TO_FLOAT, INT_TO_LONG, INT_TO_SHORT,
-            LONG_TO_DOUBLE, LONG_TO_FLOAT, LONG_TO_INT,
-            MUL_DOUBLE_2ADDR, MUL_DOUBLE, MUL_FLOAT_2ADDR, MUL_FLOAT, MUL_INT_2ADDR,
-            MUL_INT_LIT16, MUL_INT_LIT8, MUL_INT, MUL_LONG_2ADDR, MUL_LONG,
-            NEG_DOUBLE, NEG_FLOAT, NEG_INT, NEG_LONG,
-            NOT_INT, NOT_LONG,
-            OR_INT_2ADDR, OR_INT_LIT16, OR_INT_LIT8, OR_INT, OR_LONG_2ADDR, OR_LONG,
-            REM_DOUBLE_2ADDR, REM_DOUBLE, REM_FLOAT_2ADDR, REM_FLOAT, REM_INT_2ADDR,
-            REM_INT_LIT16, REM_INT_LIT8, REM_INT, REM_LONG_2ADDR, REM_LONG,
-            RSUB_INT_LIT8, RSUB_INT,
-            SHL_INT_2ADDR, SHL_INT_LIT8, SHL_INT, SHL_LONG_2ADDR, SHL_LONG,
-            SHR_INT_2ADDR, SHR_INT_LIT8, SHR_INT, SHR_LONG_2ADDR, SHR_LONG,
-            SUB_DOUBLE_2ADDR, SUB_DOUBLE, SUB_FLOAT_2ADDR, SUB_FLOAT, SUB_INT_2ADDR,
-            SUB_INT, SUB_LONG_2ADDR, SUB_LONG,
-            USHR_INT_2ADDR, USHR_INT_LIT8, USHR_INT, USHR_LONG_2ADDR, USHR_LONG,
-            XOR_INT_2ADDR, XOR_INT_LIT16, XOR_INT_LIT8, XOR_INT, XOR_LONG_2ADDR, XOR_LONG,
-        )
-    }
+    val returnOpcodes: EnumSet<Opcode> = EnumSet.of(
+        RETURN_VOID, RETURN, RETURN_WIDE, RETURN_OBJECT, RETURN_VOID_NO_BARRIER,
+        THROW
+    )
+
+    val writeOpcodes: EnumSet<Opcode> = EnumSet.of(
+        ARRAY_LENGTH,
+        INSTANCE_OF,
+        NEW_INSTANCE, NEW_ARRAY,
+        MOVE, MOVE_FROM16, MOVE_16, MOVE_WIDE, MOVE_WIDE_FROM16, MOVE_WIDE_16, MOVE_OBJECT,
+        MOVE_OBJECT_FROM16, MOVE_OBJECT_16, MOVE_RESULT, MOVE_RESULT_WIDE, MOVE_RESULT_OBJECT, MOVE_EXCEPTION,
+        CONST, CONST_4, CONST_16, CONST_HIGH16, CONST_WIDE_16, CONST_WIDE_32,
+        CONST_WIDE, CONST_WIDE_HIGH16, CONST_STRING, CONST_STRING_JUMBO,
+        IGET, IGET_WIDE, IGET_OBJECT, IGET_BOOLEAN, IGET_BYTE, IGET_CHAR, IGET_SHORT,
+        IGET_VOLATILE, IGET_WIDE_VOLATILE, IGET_OBJECT_VOLATILE,
+        SGET, SGET_WIDE, SGET_OBJECT, SGET_BOOLEAN, SGET_BYTE, SGET_CHAR, SGET_SHORT,
+        SGET_VOLATILE, SGET_WIDE_VOLATILE, SGET_OBJECT_VOLATILE,
+        AGET, AGET_WIDE, AGET_OBJECT, AGET_BOOLEAN, AGET_BYTE, AGET_CHAR, AGET_SHORT,
+        // Arithmetic and logical operations.
+        ADD_DOUBLE_2ADDR, ADD_DOUBLE, ADD_FLOAT_2ADDR, ADD_FLOAT, ADD_INT_2ADDR,
+        ADD_INT_LIT8, ADD_INT, ADD_LONG_2ADDR, ADD_LONG, ADD_INT_LIT16,
+        AND_INT_2ADDR, AND_INT_LIT8, AND_INT_LIT16, AND_INT, AND_LONG_2ADDR, AND_LONG,
+        DIV_DOUBLE_2ADDR, DIV_DOUBLE, DIV_FLOAT_2ADDR, DIV_FLOAT, DIV_INT_2ADDR,
+        DIV_INT_LIT16, DIV_INT_LIT8, DIV_INT, DIV_LONG_2ADDR, DIV_LONG,
+        DOUBLE_TO_FLOAT, DOUBLE_TO_INT, DOUBLE_TO_LONG,
+        FLOAT_TO_DOUBLE, FLOAT_TO_INT, FLOAT_TO_LONG,
+        INT_TO_BYTE, INT_TO_CHAR, INT_TO_DOUBLE, INT_TO_FLOAT, INT_TO_LONG, INT_TO_SHORT,
+        LONG_TO_DOUBLE, LONG_TO_FLOAT, LONG_TO_INT,
+        MUL_DOUBLE_2ADDR, MUL_DOUBLE, MUL_FLOAT_2ADDR, MUL_FLOAT, MUL_INT_2ADDR,
+        MUL_INT_LIT16, MUL_INT_LIT8, MUL_INT, MUL_LONG_2ADDR, MUL_LONG,
+        NEG_DOUBLE, NEG_FLOAT, NEG_INT, NEG_LONG,
+        NOT_INT, NOT_LONG,
+        OR_INT_2ADDR, OR_INT_LIT16, OR_INT_LIT8, OR_INT, OR_LONG_2ADDR, OR_LONG,
+        REM_DOUBLE_2ADDR, REM_DOUBLE, REM_FLOAT_2ADDR, REM_FLOAT, REM_INT_2ADDR,
+        REM_INT_LIT16, REM_INT_LIT8, REM_INT, REM_LONG_2ADDR, REM_LONG,
+        RSUB_INT_LIT8, RSUB_INT,
+        SHL_INT_2ADDR, SHL_INT_LIT8, SHL_INT, SHL_LONG_2ADDR, SHL_LONG,
+        SHR_INT_2ADDR, SHR_INT_LIT8, SHR_INT, SHR_LONG_2ADDR, SHR_LONG,
+        SUB_DOUBLE_2ADDR, SUB_DOUBLE, SUB_FLOAT_2ADDR, SUB_FLOAT, SUB_INT_2ADDR,
+        SUB_INT, SUB_LONG_2ADDR, SUB_LONG,
+        USHR_INT_2ADDR, USHR_INT_LIT8, USHR_INT, USHR_LONG_2ADDR, USHR_LONG,
+        XOR_INT_2ADDR, XOR_INT_LIT16, XOR_INT_LIT8, XOR_INT, XOR_LONG_2ADDR, XOR_LONG,
+    )
 }

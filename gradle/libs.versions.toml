@@ -1,13 +1,13 @@
 [versions]
-revanced-patcher = "21.0.0"
+revanced-patcher = "22.0.0"
 # Tracking https://github.com/google/smali/issues/64.
 #noinspection GradleDependency
-smali = "3.0.5"
-annotation = "1.9.1"
+smali = "3.0.8"
 agp = "8.2.2"
+annotation = "1.9.1"
 
 [libraries]
 annotation = { module = "androidx.annotation:annotation", version.ref = "annotation" }
 
 [plugins]
-android-library = { id = "com.android.library", version.ref = "agp" }
+android-library = { id = "com.android.library" }

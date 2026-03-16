@@ -1,10 +1,10 @@
 package li.auna.patches.telegram.ads
 
-import app.revanced.patcher.fingerprint
+import app.revanced.patcher.*
+import app.revanced.patcher.patch.BytecodePatchContext
 
-internal val hideSponsoredMessagesFingerprint = fingerprint {
-    returns("V")
-    custom { methodDef, classDef ->
-        methodDef.name == "addSponsoredMessages" && classDef.type.endsWith("Lorg/telegram/ui/ChatActivity;")
-    }
+internal val BytecodePatchContext.hideSponsoredMessagesMethod by gettingFirstMethodDeclaratively {
+    name("addSponsoredMessages")
+    definingClass("ChatActivity;")
+    returnType("V")
 }

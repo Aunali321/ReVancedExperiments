@@ -25,7 +25,7 @@ fun settingsPatch(
 ) = resourcePatch {
     dependsOn(addResourcesPatch)
 
-    execute {
+    apply {
         copyResources(
             "settings",
             ResourceGroup("xml", "revanced_prefs.xml"),
@@ -34,7 +34,7 @@ fun settingsPatch(
         addResources("shared", "misc.settings.settingsResourcePatch")
     }
 
-    finalize {
+    afterDependents {
         fun Node.addPreference(preference: BasePreference, prepend: Boolean = false) {
             preference.serialize(ownerDocument) { resource ->
                 // TODO: Currently, resources can only be added to "values", which may not be the correct place.

@@ -14,11 +14,11 @@ val unlockProPatch = bytecodePatch(
         "uz.unnarsx.cherrygram"
     )
 
-    execute {
-        setOf(
-            isPremiumUserFingerprint,
-            isPremiumFingerprint,
-            isPremiumForStoryFingerprint
-        ).forEach { it.method.returnEarly(true) }
+    apply {
+        listOf(
+            isPremiumUserMethod,
+            isPremiumMethod,
+            isPremiumForStoryMethod,
+        ).forEach { it.returnEarly(true) }
     }
 }

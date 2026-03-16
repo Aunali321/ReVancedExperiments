@@ -1,7 +1,7 @@
 package li.auna.patches.youtube.layout.hidesubtitletoast
 
-import app.revanced.patcher.extensions.InstructionExtensions.instructions
-import app.revanced.patcher.extensions.InstructionExtensions.removeInstruction
+import app.revanced.patcher.extensions.instructions
+import app.revanced.patcher.extensions.removeInstruction
 import app.revanced.patcher.patch.bytecodePatch
 import li.auna.util.returnEarly
 
@@ -15,10 +15,10 @@ val hideSubtitleToastPatch = bytecodePatch(
         "app.revanced.android.youtube"
     )
 
-    execute {
-        hideSubtitleToastFingerprint.method.returnEarly()
+    apply {
+        hideSubtitleToastMethod.returnEarly()
 
-        hideSubtitleToastFingerprint2.method.apply {
+        hideSubtitleToastMethod2.apply {
             val lastIndex = instructions.lastIndex - 2
             removeInstruction(lastIndex)
         }

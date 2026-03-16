@@ -15,6 +15,13 @@ import java.nio.file.StandardCopyOption
 private val classLoader = object {}.javaClass.classLoader
 
 /**
+ * Removes a node from its parent.
+ *
+ * @return The node that was removed (object this method was called on).
+ */
+fun Node.removeFromParent() : Node = parentNode.removeChild(this)
+
+/**
  * Returns a sequence for all child nodes.
  */
 fun NodeList.asSequence() = (0 until this.length).asSequence().map { this.item(it) }
@@ -69,9 +76,18 @@ fun ResourcePatchContext.copyResources(
 
     for (resourceGroup in resources) {
         resourceGroup.resources.forEach { resource ->
+            // Create the target directory if it doesn't exist.
+            Files.createDirectories(targetResourceDirectory.resolve(resourceGroup.resourceDirectoryName).toPath())
+
             val resourceFile = "${resourceGroup.resourceDirectoryName}/$resource"
+            val stream = inputStreamFromBundledResource(sourceResourceDirectory, resourceFile)
+                ?: throw IllegalArgumentException(
+                    "Could not find resource: $resourceFile " +
+                            "in directory: $sourceResourceDirectory"
+                )
+
             Files.copy(
-                inputStreamFromBundledResource(sourceResourceDirectory, resourceFile)!!,
+                stream,
                 targetResourceDirectory.resolve(resourceFile).toPath(),
                 StandardCopyOption.REPLACE_EXISTING,
             )
@@ -144,7 +160,7 @@ internal fun Node.addResource(
     appendChild(resource.serialize(ownerDocument, resourceCallback))
 }
 
-internal fun org.w3c.dom.Document.getNode(tagName: String) = this.getElementsByTagName(tagName).item(0)
+internal fun Document.getNode(tagName: String) = getElementsByTagName(tagName).item(0)
 
 internal fun NodeList.findElementByAttributeValue(attributeName: String, value: String): Element? {
     for (i in 0 until length) {
@@ -178,3 +194,14 @@ internal fun Element.copyAttributesFrom(oldContainer: Element) {
         setAttribute(attr.name, attr.value)
     }
 }
+
+/**
+ * @return The play store services version.
+ */
+internal fun ResourcePatchContext.findPlayStoreServicesVersion(): Int =
+    document("res/values/integers.xml").use { document ->
+        document.documentElement.childNodes.findElementByAttributeValueOrThrow(
+            "name",
+            "google_play_services_version",
+        ).textContent.toInt()
+    }

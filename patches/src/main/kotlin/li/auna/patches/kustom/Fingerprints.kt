@@ -1,20 +1,19 @@
 package li.auna.patches.kustom
 
-import app.revanced.patcher.fingerprint
+import app.revanced.patcher.*
+import app.revanced.patcher.patch.BytecodePatchContext
 import com.android.tools.smali.dexlib2.AccessFlags
 
-internal val hasPurchasedFingerprint = fingerprint {
+internal val BytecodePatchContext.hasPurchasedMethod by gettingFirstMethodDeclaratively {
     accessFlags(AccessFlags.PUBLIC, AccessFlags.FINAL)
-    returns("Z")
-    custom { methodDef, classDef ->
-        methodDef.name == "isLicensed" && classDef.type.endsWith("Lorg/kustom/billing/LicenseState;")
-    }
+    returnType("Z")
+    name("isLicensed")
+    definingClass("LicenseState;")
 }
 
-internal val isPurchaseValidFingerprint = fingerprint {
+internal val BytecodePatchContext.isPurchaseValidMethod by gettingFirstMethodDeclaratively {
     accessFlags(AccessFlags.PUBLIC, AccessFlags.FINAL)
-    returns("Z")
-    custom { methodDef, classDef ->
-        methodDef.name == "isValid" && classDef.type.endsWith("Lorg/kustom/billing/LicenseState;")
-    }
+    returnType("Z")
+    name("isValid")
+    definingClass("LicenseState;")
 }
