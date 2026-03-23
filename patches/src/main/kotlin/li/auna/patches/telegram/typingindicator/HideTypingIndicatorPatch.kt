@@ -14,7 +14,7 @@ val hideAdsPatch = bytecodePatch(
         "uz.unnarsx.cherrygram"
     )
 
-    execute {
-        needSendTypingFingerprint.method.returnEarly()
+    apply {
+        needSendTypingMethod.returnEarly()
     }
 }

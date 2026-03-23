@@ -1,5 +1,6 @@
 package li.auna.patches.instagram.misc.bypassintegrity
 
+import app.revanced.patcher.*
 import app.revanced.patcher.patch.bytecodePatch
 import li.auna.util.returnEarly
 
@@ -8,12 +9,11 @@ val signatureCheckPatch = bytecodePatch(
     name = "Disable signature check",
     description = "Disables the signature check that causes the app to crash on startup."
 ) {
-    compatibleWith("com.instagram.android"("378.0.0.52.68"))
+    compatibleWith("com.instagram.android")
 
-    execute {
-        isValidSignatureMethodFingerprint
-            .match(isValidSignatureClassFingerprint.classDef)
-            .method
+    apply {
+        firstClassDef(isValidSignatureClassMethod.definingClass)
+            .getIsValidSignatureMethod()
             .returnEarly(true)
     }
 }

@@ -1,26 +1,22 @@
 package li.auna.patches.telegram.pro
 
-import app.revanced.patcher.fingerprint
+import app.revanced.patcher.*
+import app.revanced.patcher.patch.BytecodePatchContext
 
-internal val isPremiumUserFingerprint = fingerprint {
-    returns("Z")
-    custom { methodDef, classDef ->
-        methodDef.name == "isPremiumUser" && classDef.type.endsWith("Lorg/telegram/messenger/MessagesController;")
-
-    }
+internal val BytecodePatchContext.isPremiumUserMethod by gettingFirstMethodDeclaratively {
+    name("isPremiumUser")
+    definingClass("MessagesController;")
+    returnType("Z")
 }
 
-internal val isPremiumFingerprint = fingerprint {
-    returns("Z")
-    custom { methodDef, classDef ->
-        methodDef.name == "isPremium" && classDef.type.endsWith("Lorg/telegram/messenger/UserConfig;")
-    }
+internal val BytecodePatchContext.isPremiumMethod by gettingFirstMethodDeclaratively {
+    name("isPremium")
+    definingClass("UserConfig;")
+    returnType("Z")
 }
 
-internal val isPremiumForStoryFingerprint = fingerprint {
-    returns("Z")
-    custom { methodDef, classDef ->
-        methodDef.name == "isPremium" && classDef.type.endsWith("Lorg/telegram/ui/Stories/StoriesController;")
-
-    }
+internal val BytecodePatchContext.isPremiumForStoryMethod by gettingFirstMethodDeclaratively {
+    name("isPremium")
+    definingClass("StoriesController;")
+    returnType("Z")
 }

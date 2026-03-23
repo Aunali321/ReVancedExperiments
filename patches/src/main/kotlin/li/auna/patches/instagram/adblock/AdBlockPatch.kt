@@ -14,7 +14,7 @@ val adBlockPatch = bytecodePatch(
         "com.instagram.barcelona",
     )
 
-    execute {
-        adInjectorFingerprint.method.returnEarly(false)
+    apply {
+        adInjectorMethod.returnEarly(false)
     }
 }

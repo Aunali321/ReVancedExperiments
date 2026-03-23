@@ -23,6 +23,8 @@ Some of the features the patches provide are:
 
 ## 🚀 How to get started
 
+> **Note**: ReVanced Manager v2.0+ is required.
+
 You can use [ReVanced CLI](https://github.com/ReVanced/revanced-cli) or [ReVanced Manager](https://github.com/ReVanced/revanced-manager) to use ReVanced Experiments.
 
 

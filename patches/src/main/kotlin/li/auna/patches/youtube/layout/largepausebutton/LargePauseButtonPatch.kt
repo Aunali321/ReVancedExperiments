@@ -12,7 +12,7 @@ val largePauseButtonPatch = resourcePatch(
         "app.revanced.android.youtube"
     )
 
-    execute {
+    apply {
         document("res/layout/youtube_controls_button_group_layout.xml").use { document ->
             val btnTouchArea =  document.getElementsByTagName("FrameLayout").item(0)
             btnTouchArea.attributes.getNamedItem("android:layout_width").nodeValue = "180dp"
