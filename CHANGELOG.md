@@ -1,3 +1,27 @@
+# [2.0.0](https://github.com/Aunali321/ReVancedExperiments/compare/v1.9.0...v2.0.0) (2026-03-23)
+
+
+### chore
+
+* Merge branch `dev` to `main` ([#31](https://github.com/Aunali321/ReVancedExperiments/issues/31)) ([332ed74](https://github.com/Aunali321/ReVancedExperiments/commit/332ed74d50f138b179bd2abd3a00cdf11d2b762d)), closes [#50](https://github.com/Aunali321/ReVancedExperiments/issues/50)
+
+
+### BREAKING CHANGES
+
+* Migrated to patcher v22 API. ReVanced Manager v2.0+ is required.
+
+* chore: Release v2.0.0-dev.1 [skip ci]
+
+# [2.0.0-dev.1](https://github.com/Aunali321/ReVancedExperiments/compare/v1.10.0-dev.1...v2.0.0-dev.1) (2026-03-20)
+
+### Features
+
+* Require ReVanced Manager v2.0+ ([5dff894](https://github.com/Aunali321/ReVancedExperiments/commit/5dff8946ea2e8daed052c2058443b5a07e9aca7c))
+
+### BREAKING CHANGES
+
+* Migrated to patcher v22 API. ReVanced Manager v2.0+ is required.
+
 # [2.0.0-dev.1](https://github.com/Aunali321/ReVancedExperiments/compare/v1.10.0-dev.1...v2.0.0-dev.1) (2026-03-20)
 
 
